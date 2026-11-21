@@ -112,6 +112,140 @@ class CandidateTransitionReducerTest {
     assertTrue(reducer.reduce(reel2))
   }
 
+  @Test
+  fun generalFeedScrollingIsNotCountedAsShortVideo() {
+    // Regular feed scroll when user is NOT in Reels/Shorts viewer
+    val generalFeedScroll = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_000L,
+      reelFingerprint = null,
+      isCommentInteraction = false,
+      isShortVideoActive = false
+    )
+    assertFalse(reducer.reduce(generalFeedScroll))
+
+    val youtubeHomeScroll = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+      packageName = TargetPackages.YOUTUBE,
+      timestamp = 2_000L,
+      reelFingerprint = null,
+      isCommentInteraction = false,
+      isShortVideoActive = false
+    )
+    assertFalse(reducer.reduce(youtubeHomeScroll))
+  }
+
+  @Test
+  fun fastSkipTransitionsAreDetectedPromptly() {
+    // Reel 1
+    val reel1 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_000L,
+      reelFingerprint = "creatorA||songA||clip1",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel1))
+
+    // Fast skip after 350ms to Reel 2 - should be detected immediately with 0 delay
+    val reel2 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_350L,
+      reelFingerprint = "creatorB||songB||clip2",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel2))
+  }
+
+  @Test
+  fun swipeScrollFollowedByFingerprintSettlingDoesNotDoubleCount() {
+    // Physical swipe starts (view scrolled event without fingerprint yet)
+    val swipeScroll = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_000L,
+      reelFingerprint = null,
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(swipeScroll))
+
+    // 250ms later the new reel settles and its fingerprint arrives
+    val reelSettled = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_250L,
+      reelFingerprint = "creatorX||songX||clipX",
+      isCommentInteraction = false
+    )
+    // Must NOT double-count the same transition!
+    assertFalse(reducer.reduce(reelSettled))
+
+    // Later content update (e.g. at 2 seconds) on the same reel must also be rejected
+    val laterUpdate = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 2_500L,
+      reelFingerprint = "creatorX||songX||clipX",
+      isCommentInteraction = false
+    )
+    assertFalse(reducer.reduce(laterUpdate))
+  }
+
+  @Test
+  fun slowSwipeDoesNotDoubleCount() {
+    // User starts on Reel 1
+    val reel1 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_000L,
+      reelFingerprint = "creator1||song1||clip1",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel1))
+
+    // Dragging slowly over 1.2s - still showing Reel 1
+    val slowDrag1 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_400L,
+      reelFingerprint = "creator1||song1||clip1",
+      isCommentInteraction = false
+    )
+    assertFalse(reducer.reduce(slowDrag1))
+
+    // Drag continues
+    val slowDrag2 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_800L,
+      reelFingerprint = "creator1||song1||clip1",
+      isCommentInteraction = false
+    )
+    assertFalse(reducer.reduce(slowDrag2))
+
+    // Reel 2 finally appears in view
+    val reel2 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 2_300L,
+      reelFingerprint = "creator2||song2||clip2",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel2))
+
+    // Finger released on Reel 2
+    val release = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 2_600L,
+      reelFingerprint = "creator2||song2||clip2",
+      isCommentInteraction = false
+    )
+    assertFalse(reducer.reduce(release))
+  }
+
   private fun event(type: Int, packageName: String, timestamp: Long) =
     EventMetadata(type, packageName, timestamp)
 }

@@ -82,8 +82,11 @@ internal class ShortVideoDetector {
       return true
     }
 
-    // Check root active window if available
-    if (rootNode != null) {
+    // Check root active window if available for window state or content changes
+    if (rootNode != null && (
+        event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+        event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+      )) {
       return hasCommentSectionInTree(rootNode)
     }
 
@@ -169,36 +172,40 @@ internal class ShortVideoDetector {
 
   private fun eventMatchesInstagramReel(event: AccessibilityEvent): Boolean {
     val resName = event.source?.viewIdResourceName?.lowercase() ?: ""
-    if (resName.contains("clips") || resName.contains("reel")) return true
+    if (
+      resName.contains("clips_viewer") ||
+      resName.contains("reel_viewer") ||
+      resName.contains("clips_video") ||
+      resName.contains("clips_pager")
+    ) return true
 
     val desc = event.contentDescription?.toString()?.lowercase() ?: ""
-    if (desc.contains("reel") || desc.contains("original audio") || desc.contains("audio")) return true
+    if (desc.contains("reel by") || desc.contains("original audio") || desc.contains("like reel")) return true
 
     return false
   }
 
   private fun hasInstagramReelIndicators(root: AccessibilityNodeInfo): Boolean {
-    // Fast path: common reels audio / tags
-    if (root.findAccessibilityNodeInfosByText("Original audio").isNotEmpty()) return true
-    if (root.findAccessibilityNodeInfosByText("Audio").isNotEmpty()) return true
-    if (root.findAccessibilityNodeInfosByText("Reels").isNotEmpty()) return true
-
     var count = 0
     fun check(node: AccessibilityNodeInfo?, depth: Int): Boolean {
       if (node == null || depth > MAX_SEARCH_DEPTH || count++ > MAX_SEARCH_NODES) return false
       val id = node.viewIdResourceName?.lowercase() ?: ""
+      // Exclude generic navigation and tab bars to avoid false positives
+      if (id.contains("tab_bar") || id.contains("bottom_navigation")) return false
+
       if (
         id.contains("clips_viewer") ||
         id.contains("clips_video") ||
         id.contains("reel_viewer") ||
         id.contains("clips_pager") ||
         id.contains("clips_author") ||
-        id.contains("clips_swipe_refresh")
+        id.contains("clips_swipe_refresh") ||
+        id.contains("reel_feed_timeline")
       ) {
         return true
       }
       val desc = node.contentDescription?.toString()?.lowercase() ?: ""
-      if (desc.contains("like reel") || desc.contains("reel by") || desc.contains("remix")) {
+      if (desc.contains("like reel") || desc.contains("reel by") || desc.contains("remix with reel")) {
         return true
       }
       for (i in 0 until node.childCount) {
@@ -212,20 +219,29 @@ internal class ShortVideoDetector {
 
   private fun eventMatchesYouTubeShorts(event: AccessibilityEvent): Boolean {
     val res = event.source?.viewIdResourceName?.lowercase() ?: ""
-    if (res.contains("reel") || res.contains("shorts")) return true
+    if (res.contains("reel_player") || res.contains("shorts_container") || res.contains("reel_watch")) return true
     val desc = event.contentDescription?.toString()?.lowercase() ?: ""
-    return desc.contains("shorts") || desc.contains("remix")
+    return desc.contains("shorts player") || desc.contains("sound used in this short")
   }
 
   private fun hasYouTubeShortsIndicators(root: AccessibilityNodeInfo): Boolean {
-    if (root.findAccessibilityNodeInfosByText("Shorts").isNotEmpty()) return true
-    if (root.findAccessibilityNodeInfosByText("Remix").isNotEmpty()) return true
-
     var count = 0
     fun check(node: AccessibilityNodeInfo?, depth: Int): Boolean {
       if (node == null || depth > MAX_SEARCH_DEPTH || count++ > MAX_SEARCH_NODES) return false
       val id = node.viewIdResourceName?.lowercase() ?: ""
-      if (id.contains("reel_player") || id.contains("shorts_container") || id.contains("reel_watch")) {
+      // Exclude generic bottom navigation tab items
+      if (id.contains("tab_bar") || id.contains("bottom_bar") || id.contains("navigation_bar")) return false
+      if (
+        id.contains("reel_player") ||
+        id.contains("shorts_container") ||
+        id.contains("reel_watch") ||
+        id.contains("shorts_player") ||
+        id.contains("reel_recycler")
+      ) {
+        return true
+      }
+      val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+      if (desc.contains("shorts player") || desc.contains("sound used in this short")) {
         return true
       }
       for (i in 0 until node.childCount) {
@@ -239,12 +255,25 @@ internal class ShortVideoDetector {
 
   private fun eventMatchesSnapchatSpotlight(event: AccessibilityEvent): Boolean {
     val res = event.source?.viewIdResourceName?.lowercase() ?: ""
-    return res.contains("spotlight")
+    return res.contains("spotlight_player") || res.contains("spotlight_feed")
   }
 
   private fun hasSnapchatSpotlightIndicators(root: AccessibilityNodeInfo): Boolean {
-    if (root.findAccessibilityNodeInfosByText("Spotlight").isNotEmpty()) return true
-    return false
+    var count = 0
+    fun check(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+      if (node == null || depth > MAX_SEARCH_DEPTH || count++ > MAX_SEARCH_NODES) return false
+      val id = node.viewIdResourceName?.lowercase() ?: ""
+      if (id.contains("tab") || id.contains("navigation")) return false
+      if (id.contains("spotlight_player") || id.contains("spotlight_feed") || id.contains("spotlight_carousel")) {
+        return true
+      }
+      for (i in 0 until node.childCount) {
+        val child = node.getChild(i) ?: continue
+        if (check(child, depth + 1)) return true
+      }
+      return false
+    }
+    return check(root, 0)
   }
 
   fun extractFingerprint(
@@ -252,6 +281,35 @@ internal class ShortVideoDetector {
     rootNode: AccessibilityNodeInfo?,
     packageName: String
   ): String? {
+    // 1. Direct fast-path check on the event itself
+    val directDesc = event.contentDescription?.toString()?.trim()
+    if (!directDesc.isNullOrEmpty() && directDesc.length in 4..140) {
+      val lower = directDesc.lowercase()
+      if (lower.contains("reel by") || lower.contains("sound used in this short") || lower.contains("original audio")) {
+        return "$packageName:$directDesc"
+      }
+    }
+
+    // 2. Direct check on event.source (the view that actually generated the event)
+    event.source?.let { source ->
+      if (!nodeMatchesComment(source)) {
+        val sDesc = source.contentDescription?.toString()?.trim()
+        if (!sDesc.isNullOrEmpty() && sDesc.length in 4..140) {
+          val lower = sDesc.lowercase()
+          if (lower.contains("reel by") || lower.contains("original audio") || lower.contains("sound used in this short")) {
+            return "$packageName:$sDesc"
+          }
+        }
+        val sText = source.text?.toString()?.trim()
+        val sId = source.viewIdResourceName?.lowercase() ?: ""
+        if (!sText.isNullOrEmpty() && sText.length in 3..140) {
+          if (sId.contains("title") || sId.contains("author") || sId.contains("creator") || sId.contains("caption")) {
+            return "$packageName:$sText"
+          }
+        }
+      }
+    }
+
     if (rootNode == null) {
       val desc = event.contentDescription?.toString()?.trim()
       if (!desc.isNullOrEmpty() && desc.length in 4..120) return "$packageName:$desc"
@@ -310,7 +368,7 @@ internal class ShortVideoDetector {
   }
 
   private companion object {
-    const val MAX_SEARCH_DEPTH = 5
-    const val MAX_SEARCH_NODES = 45
+    const val MAX_SEARCH_DEPTH = 7
+    const val MAX_SEARCH_NODES = 75
   }
 }

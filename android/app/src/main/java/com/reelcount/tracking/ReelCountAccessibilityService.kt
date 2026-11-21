@@ -152,9 +152,18 @@ class ReelCountAccessibilityService : AccessibilityService() {
     }
 
     // 4. CANDIDATE SCROLL DETECTION
-    val rootNode = try {
-      rootInActiveWindow
-    } catch (_: Exception) {
+    val rootNode = if (
+      event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
+      event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
+      event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+      event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+    ) {
+      try {
+        rootInActiveWindow
+      } catch (_: Exception) {
+        null
+      }
+    } else {
       null
     }
 
@@ -164,7 +173,8 @@ class ReelCountAccessibilityService : AccessibilityService() {
       packageName = packageName,
       timestamp = event.eventTime,
       reelFingerprint = detection.fingerprint,
-      isCommentInteraction = detection.isCommentSection
+      isCommentInteraction = detection.isCommentSection,
+      isShortVideoActive = detection.isShortVideoActive
     )
 
     if (trace.size == MAX_TRACE_EVENTS) trace.removeFirst()

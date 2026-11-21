@@ -38,15 +38,18 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
       prefs.getTodayPackageCount(TargetPackages.TIKTOK_LITE)
     val ytCount = prefs.getTodayPackageCount(TargetPackages.YOUTUBE)
     val snapCount = prefs.getTodayPackageCount(TargetPackages.SNAPCHAT)
+    val platformTotal = instaCount + tiktokCount + ytCount + snapCount
+    val totalCandidateCount = maxOf(status.candidateCount, platformTotal)
 
     val result = Arguments.createMap().apply {
       putBoolean("serviceConnected", isConnected)
-      putInt("candidateCount", status.candidateCount)
+      putInt("candidateCount", totalCandidateCount)
       putInt("bufferedEventCount", status.bufferedEventCount)
       putInt("instagramCount", instaCount)
       putInt("tiktokCount", tiktokCount)
       putInt("youtubeCount", ytCount)
       putInt("snapchatCount", snapCount)
+      putInt("snapCount", snapCount)
       putBoolean("focusModeActive", isFocusActive)
       putInt("focusRemainingSeconds", focusRemainingSec.toInt())
       putInt("dailyShortLimit", prefs.getDailyShortLimit())

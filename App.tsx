@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -336,6 +336,8 @@ const getHourDopamineProfile = (h: number) => {
   };
 };
 
+const HOURLY_DOPAMINE_PROFILES = Array.from({ length: 24 }, (_, h) => getHourDopamineProfile(h));
+
 const getZenLevel = (xp: number) => {
   if (xp >= 1200) return { level: 5, title: 'Zen Grandmaster', icon: '🌟', min: 1200, max: 2000 };
   if (xp >= 700) return { level: 4, title: 'Attention Sovereign', icon: '👑', min: 700, max: 1200 };
@@ -401,10 +403,10 @@ function App() {
   const introScrollRef = useRef<any>(null);
   const [currentIntroSlide, setCurrentIntroSlide] = useState(0);
 
-  const goToIntroSlide = (index: number) => {
+  const goToIntroSlide = useCallback((index: number) => {
     setCurrentIntroSlide(index);
     introScrollRef.current?.scrollTo({ x: index * (windowWidth || 360), animated: true });
-  };
+  }, [windowWidth]);
 
   const [activeTab, setActiveTab] = useState<Tab>('counter');
   const [consentGiven, setConsentGiven] = useState(false);
@@ -412,6 +414,13 @@ function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [hasManuallyOpenedIntro, setHasManuallyOpenedIntro] = useState(false);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
+  const [introDemoHudCount, setIntroDemoHudCount] = useState(2);
+  const [platformLimits, setPlatformLimits] = useState<Record<string, number>>({
+    instagram: 25,
+    tiktok: 25,
+    youtube: 25,
+    snapchat: 25,
+  });
 
   // Settings & Limits state
   const [dailyLimit, setDailyLimit] = useState(50);
@@ -442,6 +451,9 @@ function App() {
 
   // 7-Day History state & interaction
   const [dayHistory, setDayHistory] = useState<DayHistoryItem[]>([]);
+  const dayHistoryRef = useRef<DayHistoryItem[]>(dayHistory);
+  dayHistoryRef.current = dayHistory;
+  const lastHistoryCandidateCountRef = useRef<number>(-1);
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number | null>(null);
 
   // Mindful Breathing & Craving SOS Tool state
@@ -530,31 +542,24 @@ function App() {
   useEffect(() => {
     if (prevTabRef.current !== activeTab) {
       prevTabRef.current = activeTab;
-      tabFadeAnim.setValue(0);
-      tabTranslateY.setValue(8);
-      tabScaleAnim.setValue(0.985);
+      tabFadeAnim.setValue(0.75);
+      tabTranslateY.setValue(4);
       Animated.parallel([
         Animated.timing(tabFadeAnim, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
+          duration: 90,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(tabTranslateY, {
           toValue: 0,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.spring(tabScaleAnim, {
-          toValue: 1,
-          friction: 7,
-          tension: 140,
+          duration: 90,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
       ]).start();
     }
-  }, [activeTab, tabFadeAnim, tabTranslateY, tabScaleAnim]);
+  }, [activeTab, tabFadeAnim, tabTranslateY]);
 
   // Liquid Glass Pill Dock & Gesture Navigation
   const [hoveredTabIndex, setHoveredTabIndex] = useState<number | null>(null);
@@ -566,11 +571,11 @@ function App() {
   const dockWrapRef = useRef<any>(null);
 
   const getDockRelativeX = (screenX?: number, evtLocationX?: number): number => {
+    if (evtLocationX !== undefined && evtLocationX !== null && !isNaN(evtLocationX) && evtLocationX >= 0) {
+      return Math.max(0, Math.min(dockWidthRef.current, evtLocationX));
+    }
     if (screenX !== undefined && screenX !== null && !isNaN(screenX) && screenX > 0) {
       return Math.max(0, Math.min(dockWidthRef.current, screenX - dockLeftRef.current));
-    }
-    if (evtLocationX !== undefined && evtLocationX !== null && !isNaN(evtLocationX)) {
-      return Math.max(0, Math.min(dockWidthRef.current, evtLocationX));
     }
     return dockWidthRef.current / 2;
   };
@@ -617,21 +622,6 @@ function App() {
   const rippleX = useRef(new Animated.Value(0)).current;
   const rippleY = useRef(new Animated.Value(0)).current;
   const tooltipVisibleRef = useRef(false);
-
-  // Lazy tab virtualization state - visited tabs remain mounted in memory for 0ms instant tab switching
-  const [visitedTabs, setVisitedTabs] = useState<Record<Tab, boolean>>({
-    counter: true,
-    timers: false,
-    block: false,
-    settings: false,
-  });
-
-  useEffect(() => {
-    setVisitedTabs(prev => {
-      if (prev[activeTab]) return prev;
-      return { ...prev, [activeTab]: true };
-    });
-  }, [activeTab]);
 
   // Icon bounce animations
   const iconBounceAnims = useRef([
@@ -681,7 +671,7 @@ function App() {
   const openQuickActions = (idx: number) => {
     try {
       Vibration.vibrate([0, 15, 30, 20]);
-    } catch (_) {}
+    } catch {}
     setQuickActionTab(idx);
     quickActionScale.setValue(0.75);
     quickActionOpacity.setValue(0);
@@ -817,7 +807,7 @@ function App() {
       if (typeof Vibration?.vibrate === 'function') {
         Vibration.vibrate(8);
       }
-    } catch (_) {}
+    } catch {}
   };
 
   // Continuous Bell-Curve Fisheye Magnification - Direct 1:1 hardware values during dragging
@@ -870,47 +860,35 @@ function App() {
       Animated.spring(sliderAnim, {
         toValue: targetIdx,
         friction: 6.5,
-        tension: 85,
+        tension: 110,
         useNativeDriver: true,
       }),
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(sliderScaleX, {
-            toValue: 1.18,
-            duration: 85,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(sliderScaleY, {
-            toValue: 0.90,
-            duration: 85,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.spring(sliderScaleX, {
-            toValue: 1.0,
-            friction: 5,
-            tension: 110,
-            useNativeDriver: true,
-          }),
-          Animated.spring(sliderScaleY, {
-            toValue: 1.0,
-            friction: 5,
-            tension: 110,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
+      Animated.spring(tooltipX, {
+        toValue: targetIdx,
+        friction: 6.5,
+        tension: 110,
+        useNativeDriver: true,
+      }),
+      Animated.spring(sliderScaleX, {
+        toValue: 1.0,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(sliderScaleY, {
+        toValue: 1.0,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }),
     ]).start();
 
     if (!isDraggingDock) {
       resetDockRestingState(targetIdx);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  const touchStartX = useRef(0);
   const currentHoveredIdxRef = useRef(TAB_INDEX_MAP[activeTab]);
   const isDragActiveRef = useRef(false);
 
@@ -1068,61 +1046,41 @@ function App() {
         const screenX =
           gesture?.moveX ||
           (gesture ? gesture.x0 + gesture.dx : undefined) ||
-          evt?.nativeEvent?.pageX ||
-          (evt?.nativeEvent?.locationX !== undefined ? evt.nativeEvent.locationX + dockLeftRef.current : undefined);
+          evt?.nativeEvent?.pageX;
         const dockX = getDockRelativeX(screenX, evt?.nativeEvent?.locationX);
-        const finalIdx = getTabIndexFromDockX(dockX);
+        const finalIdx =
+          currentHoveredIdxRef.current !== null && currentHoveredIdxRef.current !== undefined
+            ? currentHoveredIdxRef.current
+            : getTabIndexFromDockX(dockX);
 
         // Switch to the released tab
-        const chosenTab = TABS[finalIdx].id;
+        const chosenTab = TABS[finalIdx]?.id ?? 'counter';
         setHoveredTabIndex(null);
         triggerDockHaptic();
 
         // Release 3D compression
         Animated.spring(dockScale, {
           toValue: 1.0,
-          friction: 5,
-          tension: 120,
+          friction: 6,
+          tension: 140,
           useNativeDriver: true,
         }).start();
 
-        // Hide Scrub Tooltip and smoothly spring to final position
+        // Hide Scrub Tooltip
         Animated.parallel([
           Animated.timing(tooltipOpacity, {
             toValue: 0,
-            duration: 160,
+            duration: 120,
             useNativeDriver: true,
           }),
           Animated.timing(tooltipScale, {
             toValue: 0.82,
-            duration: 160,
-            useNativeDriver: true,
-          }),
-          Animated.spring(sliderAnim, {
-            toValue: finalIdx,
-            friction: 6.5,
-            tension: 110,
-            useNativeDriver: true,
-          }),
-          Animated.spring(tooltipX, {
-            toValue: finalIdx,
-            friction: 6.5,
-            tension: 110,
-            useNativeDriver: true,
-          }),
-          Animated.spring(sliderScaleX, {
-            toValue: 1.0,
-            friction: 5,
-            tension: 110,
+            duration: 120,
             useNativeDriver: true,
           }),
         ]).start();
 
-        if (chosenTab !== activeTab) {
-          setActiveTab(chosenTab);
-        } else {
-          resetDockRestingState(finalIdx);
-        }
+        setActiveTab(chosenTab);
       },
       onPanResponderTerminate: () => {
         isDragActiveRef.current = false;
@@ -1203,6 +1161,8 @@ function App() {
     let interval: ReturnType<typeof setInterval> | null = null;
 
     const refreshStatus = () => {
+      if (isDragActiveRef.current) return;
+
       PrototypeSettings.getPrototypeStatus()
         .then(status => {
           if (!mounted || !status) return;
@@ -1266,6 +1226,28 @@ function App() {
             const val = status.userMood as UserMood;
             setTodayMood(prev => (prev !== val ? val : prev));
           }
+          if (status.instagramLimit !== undefined) {
+            setPlatformLimits(prev => {
+              const nextIg = status.instagramLimit || prev.instagram;
+              const nextTt = status.tiktokLimit || prev.tiktok;
+              const nextYt = status.youtubeLimit || prev.youtube;
+              const nextSc = status.snapchatLimit || prev.snapchat;
+              if (
+                prev.instagram === nextIg &&
+                prev.tiktok === nextTt &&
+                prev.youtube === nextYt &&
+                prev.snapchat === nextSc
+              ) {
+                return prev;
+              }
+              return {
+                instagram: nextIg,
+                tiktok: nextTt,
+                youtube: nextYt,
+                snapchat: nextSc,
+              };
+            });
+          }
           if (status.triggerBoredom !== undefined) {
             setTriggersLog(prev => {
               const b = status.triggerBoredom ?? 3;
@@ -1302,26 +1284,30 @@ function App() {
           if (status.onboardingCompleted && !hasManuallyOpenedIntro) {
             setShowIntro(false);
           }
-        })
-        .catch(() => {});
 
-      PrototypeSettings.getDailyHistory()
-        .then(history => {
-          if (!mounted || !history || history.length === 0) return;
-          setDayHistory(prev => {
-            if (
-              prev.length === history.length &&
-              prev.every(
-                (item, i) =>
-                  item.date === history[i].date &&
-                  item.count === history[i].count &&
-                  item.label === history[i].label,
-              )
-            ) {
-              return prev;
-            }
-            return history;
-          });
+          // Smart History Fetch: Only fetch history if candidateCount changed or on initial load
+          if (lastHistoryCandidateCountRef.current !== status.candidateCount || dayHistoryRef.current.length === 0) {
+            lastHistoryCandidateCountRef.current = status.candidateCount;
+            PrototypeSettings.getDailyHistory()
+              .then(history => {
+                if (!mounted || !history || history.length === 0) return;
+                setDayHistory(prev => {
+                  if (
+                    prev.length === history.length &&
+                    prev.every(
+                      (item, i) =>
+                        item.date === history[i].date &&
+                        item.count === history[i].count &&
+                        item.label === history[i].label,
+                    )
+                  ) {
+                    return prev;
+                  }
+                  return history;
+                });
+              })
+              .catch(() => {});
+          }
         })
         .catch(() => {});
     };
@@ -1329,7 +1315,7 @@ function App() {
     const startPolling = () => {
       if (interval) clearInterval(interval);
       refreshStatus();
-      interval = setInterval(refreshStatus, 3000);
+      interval = setInterval(refreshStatus, 1000);
     };
 
     const stopPolling = () => {
@@ -1360,25 +1346,29 @@ function App() {
   // Sync Focus Mode timer and native service
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
-    if (focusTimerRunning && focusTimerSeconds > 0) {
+    if (focusTimerRunning) {
       timer = setInterval(() => {
-        setFocusTimerSeconds(prev => (prev > 0 ? prev - 1 : 0));
+        setFocusTimerSeconds(prev => {
+          if (prev <= 1) {
+            setFocusTimerRunning(false);
+            setFocusModeActive(false);
+            PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
+            Alert.alert('Focus Session Complete! 🏆', 'Great job avoiding distraction and staying on track.');
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
-    } else if (focusTimerSeconds === 0 && focusTimerRunning) {
-      setFocusTimerRunning(false);
-      setFocusModeActive(false);
-      PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
-      Alert.alert('Focus Session Complete! 🏆', 'Great job avoiding distraction and staying on track.');
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [focusTimerRunning, focusTimerSeconds]);
+  }, [focusTimerRunning]);
 
   // Mindful Breath Guide Engine (4-4-4 Box Breathing)
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
-    if (showCravingModal && cravingTab === 'breathing' && breatheSecondsRemaining > 0) {
+    if (showCravingModal && cravingTab === 'breathing') {
       interval = setInterval(() => {
         setBreatheSecondsRemaining(prev => {
           if (prev <= 1) {
@@ -1406,12 +1396,12 @@ function App() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [showCravingModal, cravingTab, breatheSecondsRemaining]);
+  }, [showCravingModal, cravingTab]);
 
   // 90-Second Craving Surge Delay Engine
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
-    if (delayRunning && delaySeconds > 0) {
+    if (delayRunning) {
       interval = setInterval(() => {
         setDelaySeconds(prev => {
           if (prev <= 1) {
@@ -1429,26 +1419,14 @@ function App() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [delayRunning, delaySeconds]);
+  }, [delayRunning]);
 
   const openCravingModal = (tab: CravingTab = 'breathing') => {
     setCravingTab(tab);
     setShowCravingModal(true);
   };
 
-  const shareMindfulProgress = async () => {
-    try {
-      const text =
-        `🎬 ReelCount Mindful Habit Summary:\n` +
-        `🔥 ${mindfulStreak}-Day Mindful Streak\n` +
-        `⏱️ ${estMinutes}m watched today · ~${timeSavedMins}m saved beyond screen\n` +
-        `🧘 Attention Mastery: ${zenXp} Zen XP\n` +
-        `Take control of short-form doomscrolling with ReelCount!`;
-      await Share.share({ message: text });
-    } catch {}
-  };
-
-  const toggleSoundscapeAudio = (targetPlaying?: boolean, soundscapeType: FocusSoundscape = soundscape) => {
+  const toggleSoundscapeAudio = useCallback((targetPlaying?: boolean, soundscapeType: FocusSoundscape = soundscape) => {
     const nextPlaying = targetPlaying !== undefined ? targetPlaying : !soundscapePlaying;
     setSoundscapePlaying(nextPlaying);
     if (nextPlaying) {
@@ -1456,9 +1434,9 @@ function App() {
     } else {
       PrototypeSettings.stopSoundscape().catch(() => {});
     }
-  };
+  }, [soundscape, soundscapePlaying, soundscapeDurationMins]);
 
-  const continueToSettings = async () => {
+  const continueToSettings = useCallback(async () => {
     if (!consentGiven) {
       return;
     }
@@ -1469,7 +1447,7 @@ function App() {
     } catch {
       setSettingsError(true);
     }
-  };
+  }, [consentGiven]);
 
   const handleEnterDashboard = () => {
     setShowIntro(false);
@@ -1506,7 +1484,7 @@ function App() {
     );
   };
 
-  const handleToggleBlockApp = (app: 'ig' | 'tt' | 'yt' | 'sc') => {
+  const handleToggleBlockApp = useCallback((app: 'ig' | 'tt' | 'yt' | 'sc') => {
     let nextIg = blockInstagram;
     let nextTt = blockTikTok;
     let nextYt = blockYouTube;
@@ -1535,9 +1513,9 @@ function App() {
       const mins = Math.max(1, Math.ceil(focusTimerSeconds / 60));
       PrototypeSettings.setFocusMode(true, mins, blocked).catch(() => {});
     }
-  };
+  }, [blockInstagram, blockTikTok, blockYouTube, blockSnapchat, focusModeActive, focusTimerRunning, focusTimerSeconds]);
 
-  const handleToggleAllApps = (blockAll: boolean) => {
+  const handleToggleAllApps = useCallback((blockAll: boolean) => {
     setBlockInstagram(blockAll);
     setBlockTikTok(blockAll);
     setBlockYouTube(blockAll);
@@ -1555,18 +1533,18 @@ function App() {
       const mins = Math.max(1, Math.ceil(focusTimerSeconds / 60));
       PrototypeSettings.setFocusMode(true, mins, blocked).catch(() => {});
     }
-  };
+  }, [focusModeActive, focusTimerRunning, focusTimerSeconds]);
 
-  const getBlockedPackagesList = (): string[] => {
+  const getBlockedPackagesList = useCallback((): string[] => {
     const list: string[] = [];
     if (blockInstagram) list.push(TARGET_PACKAGES.INSTAGRAM);
     if (blockTikTok) list.push(TARGET_PACKAGES.TIKTOK);
     if (blockYouTube) list.push(TARGET_PACKAGES.YOUTUBE);
     if (blockSnapchat) list.push(TARGET_PACKAGES.SNAPCHAT);
     return list;
-  };
+  }, [blockInstagram, blockTikTok, blockYouTube, blockSnapchat]);
 
-  const handleToggleFocusSession = async () => {
+  const handleToggleFocusSession = useCallback(async () => {
     if (focusTimerRunning) {
       setFocusTimerRunning(false);
       setFocusModeActive(false);
@@ -1578,68 +1556,68 @@ function App() {
       setFocusModeActive(true);
       setFocusTimerRunning(true);
     }
-  };
+  }, [focusTimerRunning, getBlockedPackagesList, focusTimerSeconds]);
 
-  const handleQuickFocus15m = async () => {
+  const handleQuickFocus15m = useCallback(async () => {
     setFocusTimerSeconds(15 * 60);
     const blocked = getBlockedPackagesList();
     await PrototypeSettings.setFocusMode(true, 15, blocked);
     setFocusModeActive(true);
     setFocusTimerRunning(true);
     setActiveTab('block');
-  };
+  }, [getBlockedPackagesList]);
 
-  const handleAdjustLimit = (delta: number) => {
+  const handleAdjustLimit = useCallback((delta: number) => {
     const next = Math.max(10, Math.min(300, dailyLimit + delta));
     setDailyLimit(next);
     PrototypeSettings.setDailyLimits(next, dailyTimeLimitMin).catch(() => {});
-  };
+  }, [dailyLimit, dailyTimeLimitMin]);
 
-  const handleAdjustTimeLimit = (delta: number) => {
+  const handleAdjustTimeLimit = useCallback((delta: number) => {
     const next = Math.max(5, Math.min(180, dailyTimeLimitMin + delta));
     setDailyTimeLimitMin(next);
     PrototypeSettings.setDailyLimits(dailyLimit, next).catch(() => {});
-  };
+  }, [dailyLimit, dailyTimeLimitMin]);
 
-  const handleAdjustFocusTimer = (deltaMinutes: number) => {
+  const handleAdjustFocusTimer = useCallback((deltaMinutes: number) => {
     if (focusTimerRunning) return;
     const currentMins = Math.round(focusTimerSeconds / 60);
     const nextMins = Math.max(5, Math.min(120, currentMins + deltaMinutes));
     setFocusTimerSeconds(nextMins * 60);
-  };
+  }, [focusTimerRunning, focusTimerSeconds]);
 
-  const handleSelectDailyLimit = (limit: number) => {
+  const handleSelectDailyLimit = useCallback((limit: number) => {
     setDailyLimit(limit);
     PrototypeSettings.setDailyLimits(limit, dailyTimeLimitMin).catch(() => {});
-  };
+  }, [dailyTimeLimitMin]);
 
-  const handleSelectDailyTimeLimit = (mins: number) => {
+  const handleSelectDailyTimeLimit = useCallback((mins: number) => {
     setDailyTimeLimitMin(mins);
     PrototypeSettings.setDailyLimits(dailyLimit, mins).catch(() => {});
-  };
+  }, [dailyLimit]);
 
-  const handleSelectFocusPreset = (mins: number) => {
+  const handleSelectFocusPreset = useCallback((mins: number) => {
     setFocusTimerSeconds(mins * 60);
     if (focusTimerRunning) {
       const blocked = getBlockedPackagesList();
       PrototypeSettings.setFocusMode(true, mins, blocked).catch(() => {});
     }
-  };
-
-  const totalShorts = prototypeStatus.candidateCount;
-  const estMinutes = Math.round(totalShorts * 0.5); // avg 30s per short
-  const progressRatio = Math.min(totalShorts / (dailyLimit || 1), 1);
-  const progressPercent = Math.round(progressRatio * 100);
-
-  // Health pace categorization
-  const isOverLimit = totalShorts >= dailyLimit;
-  const isNearLimit = !isOverLimit && progressPercent >= 75;
+  }, [focusTimerRunning, getBlockedPackagesList]);
 
   // App breakdown
   const igCount = prototypeStatus.instagramCount ?? 0;
   const ttCount = prototypeStatus.tiktokCount ?? 0;
   const ytCount = prototypeStatus.youtubeCount ?? 0;
   const scCount = prototypeStatus.snapchatCount ?? 0;
+  const platformTotal = igCount + ttCount + ytCount + scCount;
+  const totalShorts = Math.max(prototypeStatus.candidateCount || 0, platformTotal);
+  const estMinutes = useMemo(() => Math.round(totalShorts * 0.5), [totalShorts]); // avg 30s per short
+  const progressRatio = useMemo(() => Math.min(totalShorts / (dailyLimit || 1), 1), [totalShorts, dailyLimit]);
+  const progressPercent = useMemo(() => Math.round(progressRatio * 100), [progressRatio]);
+
+  // Health pace categorization
+  const isOverLimit = totalShorts >= dailyLimit;
+  const isNearLimit = !isOverLimit && progressPercent >= 75;
 
   // 7-Day Stats (memoized)
   const dailyAverage = useMemo(() => {
@@ -1669,9 +1647,21 @@ function App() {
 
   // Life Reclaimed Beyond Screen
   const typicalDailyDoomscrollMins = 90;
-  const timeSavedMins = Math.max(0, typicalDailyDoomscrollMins - estMinutes);
-  const bookPagesEquivalent = Math.max(1, Math.round(estMinutes * 0.75));
-  const walkingStepsEquivalent = Math.max(50, Math.round(estMinutes * 95));
+  const timeSavedMins = useMemo(() => Math.max(0, typicalDailyDoomscrollMins - estMinutes), [estMinutes]);
+  const bookPagesEquivalent = useMemo(() => Math.max(1, Math.round(estMinutes * 0.75)), [estMinutes]);
+  const walkingStepsEquivalent = useMemo(() => Math.max(50, Math.round(estMinutes * 95)), [estMinutes]);
+
+  const shareMindfulProgress = useCallback(async () => {
+    try {
+      const text =
+        `🎬 ReelCount Mindful Habit Summary:\n` +
+        `🔥 ${mindfulStreak}-Day Mindful Streak\n` +
+        `⏱️ ${estMinutes}m watched today · ~${timeSavedMins}m saved beyond screen\n` +
+        `🧘 Attention Mastery: ${zenXp} Zen XP\n` +
+        `Take control of short-form doomscrolling with ReelCount!`;
+      await Share.share({ message: text });
+    } catch {}
+  }, [mindfulStreak, estMinutes, timeSavedMins, zenXp]);
 
   const chronoShield = useMemo(() => getChronoAnalysis(), []);
 
@@ -1755,7 +1745,10 @@ function App() {
 
 
 
-  const selectedHourProfile = getHourDopamineProfile(selectedDopamineHour);
+  const selectedHourProfile = useMemo(
+    () => getHourDopamineProfile(selectedDopamineHour),
+    [selectedDopamineHour],
+  );
 
 
 
@@ -1791,8 +1784,9 @@ function App() {
     return Math.max(10, Math.min(100, Math.round(score)));
   }, [totalShorts, dailyLimit, estMinutes, dailyTimeLimitMin, mindfulStreak, bedtimeShield]);
 
-  // Render Intro & Permissions Screen - Horizontal Multi-Slide Carousel
-  const renderIntroScreen = () => {
+  // Render Intro & Permissions Screen - Horizontal Multi-Slide Carousel (Memoized)
+  const memoizedIntroScreen = useMemo(() => {
+    if (!showIntro) return null;
     const isLastSlide = currentIntroSlide === 3;
     const slideWidth = windowWidth || 360;
 
@@ -1801,8 +1795,8 @@ function App() {
         {/* Top Header Bar */}
         <View style={styles.introTopBar}>
           <View style={styles.introBrandRow}>
-            <View style={[styles.brandBadgeIconWrap, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
-              <AppIcon name="reels" size={18} color={currentTheme.primary} />
+            <View style={[styles.brandBadgeWrap, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
+              <AppIcon name="reels" size={16} color={currentTheme.primary} />
             </View>
             <Text style={styles.introBrandName}>ReelCount</Text>
           </View>
@@ -1824,6 +1818,41 @@ function App() {
           )}
         </View>
 
+        {/* Top Story / Step Progress Indicators */}
+        <View style={styles.introSegmentedRow}>
+          {[
+            { label: 'Intention', step: 0 },
+            { label: 'Tactile HUD', step: 1 },
+            { label: 'Sanctuary', step: 2 },
+            { label: 'Activate', step: 3 },
+          ].map(item => (
+            <Pressable
+              key={item.step}
+              onPress={() => goToIntroSlide(item.step)}
+              style={styles.introSegmentItem}
+            >
+              <View
+                style={[
+                  styles.introSegmentBar,
+                  currentIntroSlide >= item.step
+                    ? [styles.introSegmentBarActive, { backgroundColor: currentTheme.primary }]
+                    : null,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.introSegmentLabel,
+                  currentIntroSlide === item.step
+                    ? [styles.introSegmentLabelActive, { color: currentTheme.primary }]
+                    : styles.introSegmentLabelInactive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         {/* Horizontal Paging Carousel */}
         <ScrollView
           ref={introScrollRef}
@@ -1837,7 +1866,7 @@ function App() {
           scrollEventThrottle={16}
           style={styles.introPager}
         >
-          {/* SLIDE 1: AWARENESS */}
+          {/* SLIDE 1: AWARENESS & INTENTION */}
           <ScrollView
             style={{ width: slideWidth }}
             contentContainerStyle={styles.introSlideContent}
@@ -1852,13 +1881,53 @@ function App() {
               <View style={styles.introSlideBody}>
                 <View style={styles.introEyebrowBadge}>
                   <Text style={[styles.introEyebrowText, { color: currentTheme.primary }]}>
-                    STEP 1 OF 4 · MINDFULNESS
+                    STEP 1 OF 4 · MINDFUL INTENTION
                   </Text>
                 </View>
                 <Text style={styles.introSlideTitle}>Break the Doomscroll Loop</Text>
                 <Text style={styles.introSlideSubtitle}>
                   Quietly observe short video scrolling across Instagram Reels, YouTube Shorts, and TikTok before hours slip away.
                 </Text>
+
+                {/* Interactive Boundary Goal Selector */}
+                <View style={styles.introInteractiveSection}>
+                  <Text style={[styles.introSectionMiniTitle, { color: currentTheme.primary }]}>
+                    CHOOSE YOUR DAILY MINDFUL BOUNDARY
+                  </Text>
+                  <View style={styles.introGoalRow}>
+                    {[
+                      { cap: 25, label: 'Strict Detox', sub: '~12m / day', icon: '⚡' },
+                      { cap: 50, label: 'Balanced', sub: '~25m (Recommended)', icon: '🌿' },
+                      { cap: 100, label: 'Gentle', sub: '~50m / day', icon: '🎯' },
+                    ].map(preset => {
+                      const isSelected = dailyLimit === preset.cap;
+                      return (
+                        <Pressable
+                          key={preset.cap}
+                          onPress={() => {
+                            triggerDockHaptic();
+                            setDailyLimit(preset.cap);
+                            PrototypeSettings.setDailyLimits(preset.cap, dailyTimeLimitMin).catch(() => {});
+                          }}
+                          style={[
+                            styles.introGoalOptionCard,
+                            {
+                              borderColor: isSelected ? currentTheme.primary : currentTheme.hairline,
+                              backgroundColor: isSelected ? currentTheme.glow : currentTheme.surface,
+                            },
+                          ]}
+                        >
+                          <Text style={styles.introGoalOptionIcon}>{preset.icon}</Text>
+                          <Text style={[styles.introGoalOptionCap, isSelected && { color: currentTheme.primary }]}>
+                            {preset.cap}
+                          </Text>
+                          <Text style={styles.introGoalOptionLabel}>{preset.label}</Text>
+                          <Text style={styles.introGoalOptionSub}>{preset.sub}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
 
                 <View style={styles.introChipRow}>
                   <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
@@ -1878,7 +1947,7 @@ function App() {
             </View>
           </ScrollView>
 
-          {/* SLIDE 2: LIVE HUD */}
+          {/* SLIDE 2: LIVE HUD & SIMULATOR */}
           <ScrollView
             style={{ width: slideWidth }}
             contentContainerStyle={styles.introSlideContent}
@@ -1901,6 +1970,45 @@ function App() {
                   A discrete floating pill hovers over your screen with gentle haptic ticks on every video you swipe.
                 </Text>
 
+                {/* Interactive Floating HUD Simulator */}
+                <View style={[styles.introHudSimulatorCard, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+                  <View style={styles.introHudSimHeader}>
+                    <Text style={[styles.introHudSimTitle, { color: currentTheme.primary }]}>
+                      Interactive Floating HUD Simulator
+                    </Text>
+                    <View style={[styles.introHudSimBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                      <Text style={[styles.introHudSimBadgeText, { color: currentTheme.primary }]}>LIVE PREVIEW</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.introHudSimStage}>
+                    <View style={[styles.introHudPreviewPill, { borderColor: currentTheme.border }]}>
+                      <View style={[styles.introHudPillDot, { backgroundColor: currentTheme.primary }]} />
+                      <Text style={styles.introHudPillText}>Reels HUD</Text>
+                      <View style={[styles.introHudPillCounterBadge, { backgroundColor: currentTheme.glow }]}>
+                        <Text style={[styles.introHudPillCounterVal, { color: currentTheme.primary }]}>
+                          {`${introDemoHudCount} swipes`}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    onPress={() => {
+                      triggerDockHaptic();
+                      setIntroDemoHudCount(c => c + 1);
+                    }}
+                    style={[styles.introSimulateSwipeBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
+                  >
+                    <Text style={[styles.introSimulateSwipeText, { color: currentTheme.actionText }]}>
+                      ⚡ Tap to Simulate Video Swipe (+1)
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.introSimulateHelpText}>
+                    Discreetly floats on top of Instagram, TikTok, and YouTube with gentle haptic ticks.
+                  </Text>
+                </View>
+
                 <View style={styles.introChipRow}>
                   <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
                     <AppIcon name="dashboard" size={14} color={currentTheme.primary} />
@@ -1919,7 +2027,7 @@ function App() {
             </View>
           </ScrollView>
 
-          {/* SLIDE 3: BEDTIME & FOCUS */}
+          {/* SLIDE 3: BEDTIME & FOCUS SAFEGUARDS */}
           <ScrollView
             style={{ width: slideWidth }}
             contentContainerStyle={styles.introSlideContent}
@@ -1941,6 +2049,94 @@ function App() {
                 <Text style={styles.introSlideSubtitle}>
                   Automatic 11 PM bedtime lockdown and 1-tap focus shields keep distraction feeds strictly closed.
                 </Text>
+
+                {/* Interactive Shield Defenses */}
+                <View style={styles.introShieldsBox}>
+                  <Pressable
+                    onPress={() => {
+                      triggerDockHaptic();
+                      setBedtimeShield(prev => !prev);
+                    }}
+                    style={[
+                      styles.introShieldRow,
+                      {
+                        borderColor: bedtimeShield ? currentTheme.border : currentTheme.hairline,
+                        backgroundColor: currentTheme.surface,
+                      },
+                    ]}
+                  >
+                    <View style={styles.introShieldCol}>
+                      <View style={styles.introShieldTitleRow}>
+                        <Text style={styles.introShieldTitle}>🌙 11 PM Sleep Sanctuary</Text>
+                        <View
+                          style={[
+                            styles.introShieldActiveTag,
+                            bedtimeShield
+                              ? [styles.introShieldTagActive, { backgroundColor: currentTheme.glow }]
+                              : styles.introShieldTagIdle,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.introShieldActiveTagText,
+                              bedtimeShield
+                                ? [styles.introShieldTagTextActive, { color: currentTheme.primary }]
+                                : styles.introShieldTagTextIdle,
+                            ]}
+                          >
+                            {bedtimeShield ? 'ENABLED' : 'OFF'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introShieldDesc}>
+                        Auto-shield late night feeds so midnight scrolling doesn't steal sleep.
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      triggerDockHaptic();
+                      setSpeedbumpEnabled(prev => !prev);
+                    }}
+                    style={[
+                      styles.introShieldRow,
+                      styles.introShieldRowSpaced,
+                      {
+                        borderColor: speedbumpEnabled ? currentTheme.border : currentTheme.hairline,
+                        backgroundColor: currentTheme.surface,
+                      },
+                    ]}
+                  >
+                    <View style={styles.introShieldCol}>
+                      <View style={styles.introShieldTitleRow}>
+                        <Text style={styles.introShieldTitle}>🧘 Mindful Speedbump</Text>
+                        <View
+                          style={[
+                            styles.introShieldActiveTag,
+                            speedbumpEnabled
+                              ? [styles.introShieldTagActive, { backgroundColor: currentTheme.glow }]
+                              : styles.introShieldTagIdle,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.introShieldActiveTagText,
+                              speedbumpEnabled
+                                ? [styles.introShieldTagTextActive, { color: currentTheme.primary }]
+                                : styles.introShieldTagTextIdle,
+                            ]}
+                          >
+                            {speedbumpEnabled ? 'ENABLED' : 'OFF'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introShieldDesc}>
+                        Subtle 5-second breath pause every 15 short videos to break unconscious loops.
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
 
                 <View style={styles.introChipRow}>
                   <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
@@ -1982,6 +2178,55 @@ function App() {
                 <Text style={styles.introSlideSubtitle}>
                   Zero network transmission. No screen content, chats, passwords, or personal data are ever read.
                 </Text>
+
+                {/* 3-Step Visual Setup Guide */}
+                <View style={[styles.introSetupGuideCard, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
+                  <Text style={[styles.introSetupGuideHeader, { color: currentTheme.primary }]}>
+                    3-STEP ANDROID SETUP (TAKES 5 SECONDS)
+                  </Text>
+
+                  <View style={styles.introSetupStepItem}>
+                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>1</Text>
+                    </View>
+                    <Text style={styles.introSetupStepText}>
+                      Check consent below and tap Continue to Settings
+                    </Text>
+                  </View>
+
+                  <View style={styles.introSetupStepItem}>
+                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>2</Text>
+                    </View>
+                    <Text style={styles.introSetupStepText}>
+                      Look for Downloaded apps (or Installed services)
+                    </Text>
+                  </View>
+
+                  <View style={styles.introSetupStepItem}>
+                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>3</Text>
+                    </View>
+                    <Text style={styles.introSetupStepText}>
+                      Select ReelCount Tracker and toggle switch ON
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Celebratory Live Badge if connected */}
+                {prototypeStatus.serviceConnected && (
+                  <View style={[styles.introCelebrationCard, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                    <AppIcon name="check" size={20} color={currentTheme.primary} />
+                    <View style={styles.introCelebrationCol}>
+                      <Text style={[styles.introCelebrationTitle, { color: currentTheme.primary }]}>
+                        Service Calibrated & Live Active!
+                      </Text>
+                      <Text style={styles.introCelebrationSub}>
+                        ReelCount is quietly protecting your attention 100% on-device.
+                      </Text>
+                    </View>
+                  </View>
+                )}
 
                 {/* Service Status Badge */}
                 <View style={styles.statusSection} accessibilityLiveRegion="polite">
@@ -2039,11 +2284,20 @@ function App() {
                   onPress={continueToSettings}
                   style={[
                     styles.button,
-                    { backgroundColor: consentGiven ? currentTheme.actionFill : '#141414', borderColor: consentGiven ? currentTheme.border : '#222222' },
+                    consentGiven
+                      ? [styles.buttonConsentActive, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]
+                      : styles.buttonConsentDisabled,
                     !consentGiven && styles.buttonDisabled,
                   ]}
                 >
-                  <Text style={[styles.buttonText, { color: consentGiven ? currentTheme.actionText : '#666666' }]}>
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      consentGiven
+                        ? [styles.buttonTextConsentActive, { color: currentTheme.actionText }]
+                        : styles.buttonTextConsentDisabled,
+                    ]}
+                  >
                     {prototypeStatus.serviceConnected
                       ? 'Manage Accessibility Settings'
                       : 'Continue to Accessibility Settings'}
@@ -2059,7 +2313,7 @@ function App() {
                 {/* Dashboard button */}
                 <Pressable
                   onPress={handleEnterDashboard}
-                  style={[styles.enterDashboardButton, { borderColor: currentTheme.hairline, marginTop: 10 }]}
+                  style={[styles.enterDashboardButton, { borderColor: currentTheme.hairline }]}
                 >
                   <Text style={[styles.enterDashboardButtonText, { color: currentTheme.primary }]}>
                     {prototypeStatus.serviceConnected ? 'Enter Sanctuary Dashboard →' : 'Skip to Dashboard →'}
@@ -2118,11 +2372,36 @@ function App() {
         </View>
       </View>
     );
-  };
+  }, [
+    showIntro,
+    currentIntroSlide,
+    introDemoHudCount,
+    bedtimeShield,
+    speedbumpEnabled,
+    consentGiven,
+    settingsError,
+    prototypeStatus.serviceConnected,
+    prototypeStatus.candidateCount,
+    currentTheme,
+    windowWidth,
+    continueToSettings,
+    dailyLimit,
+    dailyTimeLimitMin,
+    goToIntroSlide,
+  ]);
+  const renderIntroScreen = () => memoizedIntroScreen;
 
-  // Render Dashboard / Counter Tab (Clean, Minimal, Focused on Daily Essentials)
-  const renderCounterTab = () => (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} removeClippedSubviews={true} overScrollMode="never">
+  // Render Dashboard / Counter Tab (Clean, Minimal, Focused on Daily Essentials - Memoized)
+  const memoizedCounterTab = useMemo(() => {
+    if (activeTab !== 'counter') return null;
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+      >
       {/* Top App Header with Adaptive Greeting & Live Service Status */}
       <View style={styles.dashboardHeader}>
         <View>
@@ -2136,31 +2415,76 @@ function App() {
             {greeting.text} · <Text style={[styles.greetingTip, { color: currentTheme.primary }]}>{greeting.tip}</Text>
           </Text>
         </View>
-        <View
-          style={[
-            styles.servicePill,
-            prototypeStatus.serviceConnected
-              ? [styles.servicePillActive, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]
-              : styles.servicePillInactive,
-          ]}
-        >
-          <View
+        <View style={styles.dashboardHeaderActions}>
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              const nextStyle: HudStyle =
+                hudStyle === 'pill' ? 'dot' : hudStyle === 'dot' ? 'warning_only' : 'pill';
+              setHudStyle(nextStyle);
+              PrototypeSettings.setHudStyle(nextStyle).catch(() => {});
+            }}
             style={[
-              styles.serviceDot,
-              prototypeStatus.serviceConnected ? [styles.serviceDotActive, { backgroundColor: currentTheme.primary }] : styles.serviceDotInactive,
-            ]}
-          />
-          <Text
-            style={[
-              styles.servicePillText,
-              prototypeStatus.serviceConnected
-                ? [styles.servicePillTextActive, { color: currentTheme.primary }]
-                : styles.servicePillTextInactive,
+              styles.dashboardHudPill,
+              styles.dashboardHudPillActive,
+              { borderColor: currentTheme.border, backgroundColor: currentTheme.glow },
             ]}
           >
-            {prototypeStatus.serviceConnected ? 'Live Active' : 'Off'}
-          </Text>
+            <AppIcon name="reels" size={12} color={currentTheme.primary} />
+            <Text style={[styles.dashboardHudPillText, { color: currentTheme.primary }]}>
+              {hudStyle === 'pill' ? 'HUD: Pill' : hudStyle === 'dot' ? 'HUD: Compact' : 'HUD: Stealth'}
+            </Text>
+          </Pressable>
+
+          <View
+            style={[
+              styles.servicePill,
+              prototypeStatus.serviceConnected
+                ? [styles.servicePillActive, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]
+                : styles.servicePillInactive,
+            ]}
+          >
+            <View
+              style={[
+                styles.serviceDot,
+                prototypeStatus.serviceConnected ? [styles.serviceDotActive, { backgroundColor: currentTheme.primary }] : styles.serviceDotInactive,
+              ]}
+            />
+            <Text
+              style={[
+                styles.servicePillText,
+                prototypeStatus.serviceConnected
+                  ? [styles.servicePillTextActive, { color: currentTheme.primary }]
+                  : styles.servicePillTextInactive,
+              ]}
+            >
+              {prototypeStatus.serviceConnected ? 'Live Active' : 'Off'}
+            </Text>
+          </View>
         </View>
+      </View>
+
+      {/* Daily Compass & Zen XP Banner */}
+      <View style={[styles.dashboardCompassStrip, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
+        <View style={styles.dashboardCompassLeft}>
+          <Text style={styles.dashboardCompassIcon}>🧭</Text>
+          <View style={styles.dashboardCompassContent}>
+            <Text style={[styles.dashboardCompassEyebrow, { color: currentTheme.primary }]}>DAILY COMPASS</Text>
+            <Text style={styles.dashboardCompassTitle} numberOfLines={1}>"{selectedIntention}"</Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => {
+            triggerDockHaptic();
+            setActiveTab('settings');
+          }}
+          style={[styles.dashboardZenBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}
+        >
+          <Text style={[styles.dashboardZenBadgeText, { color: currentTheme.primary }]}>
+            Lvl {zenLevel.level} · {zenXp} XP
+          </Text>
+        </Pressable>
       </View>
 
       {/* Focus Mode Live Banner if running */}
@@ -2240,13 +2564,46 @@ function App() {
             ]}
           >
             <View style={[styles.circularRingInner, { borderColor: currentTheme.border }]}>
-              <Text style={[styles.heroCount, isOverLimit && styles.heroCountOverLimit, { color: isOverLimit ? '#ef4444' : currentTheme.primary }]}>
+              <Text style={[styles.heroCount, isOverLimit ? styles.heroCountOverLimit : { color: currentTheme.primary }]}>
                 {totalShorts}
               </Text>
               <Text style={styles.heroUnitLabel}>videos today</Text>
               <Text style={styles.heroGoalSubtext}>of {dailyLimit} target</Text>
             </View>
           </Animated.View>
+        </View>
+
+        {/* Quick Stepper for Daily Boundary */}
+        <View style={styles.heroTargetStepperRow}>
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              const nextLimit = Math.max(10, dailyLimit - 5);
+              setDailyLimit(nextLimit);
+              PrototypeSettings.setDailyLimits(nextLimit, dailyTimeLimitMin).catch(() => {});
+            }}
+            style={[styles.heroStepperBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
+          >
+            <Text style={[styles.heroStepperBtnText, { color: currentTheme.primary }]}>- 5</Text>
+          </Pressable>
+
+          <View style={[styles.heroTargetPill, { borderColor: currentTheme.hairline }]}>
+            <Text style={styles.heroTargetPillLabel}>
+              Boundary: <Text style={[styles.heroTargetPillVal, { color: currentTheme.primary }]}>{dailyLimit} reels</Text>
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              const nextLimit = dailyLimit + 5;
+              setDailyLimit(nextLimit);
+              PrototypeSettings.setDailyLimits(nextLimit, dailyTimeLimitMin).catch(() => {});
+            }}
+            style={[styles.heroStepperBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
+          >
+            <Text style={[styles.heroStepperBtnText, { color: currentTheme.primary }]}>+ 5</Text>
+          </Pressable>
         </View>
 
         {/* Dynamic Dopamine Risk Gauge */}
@@ -2291,6 +2648,20 @@ function App() {
                 : `${dailyLimit - totalShorts} remaining`}
             </Text>
           </View>
+        </View>
+
+        {/* Dynamic Mindful Insight Card */}
+        <View style={[styles.heroMindfulInsightBanner, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+          <Text style={styles.heroMindfulInsightIcon}>
+            {isOverLimit ? '🛑' : isNearLimit ? '⚡' : '🌱'}
+          </Text>
+          <Text style={[styles.heroMindfulInsightText, { color: currentTheme.primary }]}>
+            {isOverLimit
+              ? `Target exceeded by ${totalShorts - dailyLimit} videos. Rest your prefrontal cortex.`
+              : isNearLimit
+              ? `Approaching daily boundary (${dailyLimit - totalShorts} left). Ready for a 1m mindful reset?`
+              : `Pacing mindfully! You've reclaimed ~${timeSavedMins}m of real-world cognitive energy today.`}
+          </Text>
         </View>
 
         {/* 4-Stat Quick Grid inside Hero Card */}
@@ -2343,10 +2714,10 @@ function App() {
         </Text>
 
         {[
-          { id: 'instagram', name: 'Instagram Reels', count: igCount, unit: 'reels', icon: '📸', circleStyle: styles.igCircle, fillStyle: styles.igFill },
-          { id: 'tiktok', name: 'TikTok', count: ttCount, unit: 'videos', icon: '🎵', circleStyle: styles.ttCircle, fillStyle: styles.ttFill },
-          { id: 'youtube', name: 'YouTube Shorts', count: ytCount, unit: 'shorts', icon: '▶️', circleStyle: styles.ytCircle, fillStyle: styles.ytFill },
-          { id: 'snapchat', name: 'Snapchat Spotlight', count: scCount, unit: 'clips', icon: '👻', circleStyle: styles.scCircle, fillStyle: styles.scFill },
+          { id: 'instagram', name: 'Instagram Reels', count: igCount, unit: 'reels', icon: '📸', pkg: TARGET_PACKAGES.INSTAGRAM, circleStyle: styles.igCircle, fillStyle: styles.igFill },
+          { id: 'tiktok', name: 'TikTok', count: ttCount, unit: 'videos', icon: '🎵', pkg: TARGET_PACKAGES.TIKTOK, circleStyle: styles.ttCircle, fillStyle: styles.ttFill },
+          { id: 'youtube', name: 'YouTube Shorts', count: ytCount, unit: 'shorts', icon: '▶️', pkg: TARGET_PACKAGES.YOUTUBE, circleStyle: styles.ytCircle, fillStyle: styles.ytFill },
+          { id: 'snapchat', name: 'Snapchat Spotlight', count: scCount, unit: 'clips', icon: '👻', pkg: TARGET_PACKAGES.SNAPCHAT, circleStyle: styles.scCircle, fillStyle: styles.scFill },
         ].map(platform => {
           const isExpanded = expandedPlatform === platform.id;
           const sharePercent = totalShorts > 0 ? Math.round((platform.count / totalShorts) * 100) : 0;
@@ -2391,29 +2762,64 @@ function App() {
                 </View>
               </View>
 
-              {/* Expandable Quick Action Bar */}
+              {/* Expandable Quick Action Bar & Per-App Quota Controls */}
               {isExpanded && (
-                <View style={[styles.platformActionPillRow, { borderTopColor: currentTheme.hairline }]}>
-                  <Pressable
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setActiveTab('block');
-                    }}
-                    style={[styles.platformMicroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
-                  >
-                    <AppIcon name="shield" size={13} color={currentTheme.primary} />
-                    <Text style={[styles.platformMicroActionText, { color: currentTheme.primary }]}>Lock in Shield</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setActiveTab('timers');
-                    }}
-                    style={[styles.platformMicroActionBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}
-                  >
-                    <AppIcon name="timer" size={13} color={currentTheme.primary} />
-                    <Text style={[styles.platformMicroActionText, { color: currentTheme.primary }]}>Set App Limit</Text>
-                  </Pressable>
+                <View style={[styles.platformExpandedSection, { borderTopColor: currentTheme.hairline }]}>
+                  <View style={styles.platformQuotaAdjustRow}>
+                    <Text style={styles.platformQuotaAdjustLabel}>App Quota:</Text>
+                    <Pressable
+                      onPress={() => {
+                        triggerDockHaptic();
+                        const cur = platformLimits[platform.id] || 25;
+                        const nextLimit = Math.max(5, cur - 5);
+                        setPlatformLimits(prev => ({ ...prev, [platform.id]: nextLimit }));
+                        PrototypeSettings.setPackageLimit(platform.pkg, nextLimit).catch(() => {});
+                      }}
+                      style={[styles.platformQuotaStepBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
+                    >
+                      <Text style={[styles.platformQuotaStepBtnText, { color: currentTheme.primary }]}>- 5</Text>
+                    </Pressable>
+                    <View style={[styles.platformQuotaBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                      <Text style={[styles.platformQuotaBadgeText, { color: currentTheme.primary }]}>
+                        {platformLimits[platform.id] || 25} {platform.unit}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => {
+                        triggerDockHaptic();
+                        const cur = platformLimits[platform.id] || 25;
+                        const nextLimit = cur + 5;
+                        setPlatformLimits(prev => ({ ...prev, [platform.id]: nextLimit }));
+                        PrototypeSettings.setPackageLimit(platform.pkg, nextLimit).catch(() => {});
+                      }}
+                      style={[styles.platformQuotaStepBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
+                    >
+                      <Text style={[styles.platformQuotaStepBtnText, { color: currentTheme.primary }]}>+ 5</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.platformActionPillRow}>
+                    <Pressable
+                      onPress={() => {
+                        triggerDockHaptic();
+                        setActiveTab('block');
+                      }}
+                      style={[styles.platformMicroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
+                    >
+                      <AppIcon name="shield" size={13} color={currentTheme.primary} />
+                      <Text style={[styles.platformMicroActionText, { color: currentTheme.primary }]}>Lock in Shield</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        triggerDockHaptic();
+                        setActiveTab('timers');
+                      }}
+                      style={[styles.platformMicroActionBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}
+                    >
+                      <AppIcon name="timer" size={13} color={currentTheme.primary} />
+                      <Text style={[styles.platformMicroActionText, { color: currentTheme.primary }]}>All Limits</Text>
+                    </Pressable>
+                  </View>
                 </View>
               )}
             </Pressable>
@@ -2436,73 +2842,71 @@ function App() {
         </View>
 
         <View style={styles.chartContainer}>
-          {dayHistory.length > 0
-            ? dayHistory.map((item, idx) => {
-                const maxCount = Math.max(1, ...dayHistory.map(d => d.count), dailyLimit);
-                const heightRatio = Math.min(item.count / maxCount, 1);
-                const isToday = item.label === 'Today' || idx === dayHistory.length - 1;
-                const exceeded = item.count >= dailyLimit;
-                const isSelected = selectedHistoryIndex === idx;
+          {(() => {
+            const maxHistoryCount = Math.max(1, ...dayHistory.map(d => d.count), dailyLimit);
+            return dayHistory.length > 0
+              ? dayHistory.map((item, idx) => {
+                  const heightRatio = Math.min(item.count / maxHistoryCount, 1);
+                  const isToday = item.label === 'Today' || idx === dayHistory.length - 1;
+                  const exceeded = item.count >= dailyLimit;
+                  const isSelected = selectedHistoryIndex === idx;
 
-                return (
-                  <Pressable
-                    key={item.date || idx}
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setSelectedHistoryIndex(idx === selectedHistoryIndex ? null : idx);
-                    }}
-                    style={styles.barCol}
-                  >
-                    <Text
-                      style={[
-                        styles.barCountText,
-                        isSelected && [styles.barCountTextSelected, { color: currentTheme.primary }],
-                      ]}
+                  return (
+                    <Pressable
+                      key={item.date || idx}
+                      onPress={() => {
+                        triggerDockHaptic();
+                        setSelectedHistoryIndex(idx === selectedHistoryIndex ? null : idx);
+                      }}
+                      style={styles.barCol}
                     >
-                      {item.count > 0 ? item.count : '-'}
-                    </Text>
-                    <View
-                      style={[
-                        styles.barTrack,
-                        { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline },
-                        isSelected && [styles.barTrackSelected, { borderColor: currentTheme.primary }],
-                      ]}
-                    >
+                      <Text
+                        style={[
+                          styles.barCountText,
+                          isSelected && [styles.barCountTextSelected, { color: currentTheme.primary }],
+                        ]}
+                      >
+                        {item.count > 0 ? item.count : '-'}
+                      </Text>
                       <View
                         style={[
-                          styles.barFill,
-                          {
-                            height: `${Math.max(8, Math.round(heightRatio * 100))}%`,
-                            backgroundColor: exceeded
-                              ? '#ef4444'
-                              : isToday
-                              ? currentTheme.primary
-                              : currentTheme.border,
-                          },
+                          styles.barTrack,
+                          { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline },
+                          isSelected && [styles.barTrackSelected, { borderColor: currentTheme.primary }],
                         ]}
-                      />
+                      >
+                        <View
+                          style={[
+                            styles.barFill,
+                            exceeded
+                              ? styles.barFillLimit
+                              : { backgroundColor: isToday ? currentTheme.primary : currentTheme.border },
+                            { height: `${Math.max(8, Math.round(heightRatio * 100))}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.barLabel,
+                          isToday && [styles.barLabelToday, { color: currentTheme.primary }],
+                          isSelected && [styles.barLabelSelected, { color: currentTheme.primary }],
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })
+              : ['M', 'T', 'W', 'T', 'F', 'S', 'Today'].map((label, idx) => (
+                  <View key={idx} style={styles.barCol}>
+                    <Text style={styles.barCountText}>-</Text>
+                    <View style={[styles.barTrack, { backgroundColor: currentTheme.surface }]}>
+                      <View style={[styles.barFill, styles.barPlaceholderFill, { backgroundColor: currentTheme.hairline }]} />
                     </View>
-                    <Text
-                      style={[
-                        styles.barLabel,
-                        isToday && [styles.barLabelToday, { color: currentTheme.primary }],
-                        isSelected && [styles.barLabelSelected, { color: currentTheme.primary }],
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })
-            : ['M', 'T', 'W', 'T', 'F', 'S', 'Today'].map((label, idx) => (
-                <View key={idx} style={styles.barCol}>
-                  <Text style={styles.barCountText}>-</Text>
-                  <View style={[styles.barTrack, { backgroundColor: currentTheme.surface }]}>
-                    <View style={[styles.barFill, styles.barPlaceholderFill, { backgroundColor: currentTheme.hairline }]} />
+                    <Text style={[styles.barLabel, idx === 6 && [styles.barLabelToday, { color: currentTheme.primary }]]}>{label}</Text>
                   </View>
-                  <Text style={[styles.barLabel, idx === 6 && [styles.barLabelToday, { color: currentTheme.primary }]]}>{label}</Text>
-                </View>
-              ))}
+                ));
+          })()}
         </View>
 
         {/* Selected Day Insight Card */}
@@ -2519,6 +2923,21 @@ function App() {
             </Text>
           </View>
         )}
+
+        {/* Weekly Trend Summary */}
+        <View style={[styles.weeklyRhythmSummaryRow, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+          <Text style={styles.weeklySummaryEmoji}>{mindfulStreak > 1 ? '🔥' : '🌱'}</Text>
+          <View style={styles.weeklySummaryCol}>
+            <Text style={[styles.weeklySummaryTitle, { color: currentTheme.primary }]}>
+              {mindfulStreak > 1 ? `${mindfulStreak}-Day Mindful Streak` : 'Fresh Weekly Rhythm'}
+            </Text>
+            <Text style={styles.weeklySummarySubtitle}>
+              {dayHistory.length > 0
+                ? `${dayHistory.reduce((acc, d) => acc + d.count, 0)} total videos across 7 days · average ~${dailyAverage} per day`
+                : 'Tracking your daily mindful rhythm across video feeds'}
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* Dock Quick Shortcuts Row */}
@@ -2533,11 +2952,54 @@ function App() {
         </Pressable>
       </View>
     </ScrollView>
-  );
+    );
+  }, [
+    activeTab,
+    prototypeStatus,
+    dailyLimit,
+    dailyTimeLimitMin,
+    greeting.text,
+    greeting.tip,
+    handleQuickFocus15m,
+    hudStyle,
+    focusTimerRunning,
+    focusTimerSeconds,
+    selectedIntention,
+    zenLevel,
+    zenXp,
+    totalShorts,
+    isOverLimit,
+    isNearLimit,
+    estMinutes,
+    progressPercent,
+    igCount,
+    ttCount,
+    ytCount,
+    scCount,
+    expandedPlatform,
+    dayHistory,
+    selectedHistoryIndex,
+    dailyAverage,
+    mindfulStreak,
+    timeSavedMins,
+    currentTheme,
+    platformLimits,
+    haloScale,
+    haloOpacity,
+  ]);
+  const renderCounterTab = () => memoizedCounterTab;
 
-  // Render Timers & Limits Tab
-  const renderTimersTab = () => (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} removeClippedSubviews={true} overScrollMode="never">
+  // Render Timers & Limits Tab (Memoized)
+  const memoizedTimersTab = useMemo(() => {
+    if (activeTab !== 'timers') return null;
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+      >
       <Text style={styles.tabScreenTitle}>Limits & Insights</Text>
       <Text style={styles.tabScreenSubtitle}>
         Set deliberate habit boundaries and observe your circadian attention rhythm.
@@ -2688,8 +3150,7 @@ function App() {
 
         {/* 24-Hour Scrollable Hourly Bar Dial */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyBarRow} nestedScrollEnabled={true} overScrollMode="never">
-          {Array.from({ length: 24 }).map((_, h) => {
-            const prof = getHourDopamineProfile(h);
+          {HOURLY_DOPAMINE_PROFILES.map((prof, h) => {
             const isSelected = selectedDopamineHour === h;
             const isCurrent = new Date().getHours() === h;
 
@@ -2960,11 +3421,42 @@ function App() {
         </Pressable>
       </View>
     </ScrollView>
-  );
+    );
+  }, [
+    activeTab,
+    dailyLimit,
+    dailyTimeLimitMin,
+    selectedDopamineHour,
+    selectedHourProfile,
+    triggersLog,
+    selectedTrigger,
+    doomscrollAlert,
+    breakReminder,
+    bedtimeShield,
+    speedbumpEnabled,
+    weeklyRecapAlert,
+    currentTheme,
+    bookPagesEquivalent,
+    handleAdjustLimit,
+    handleAdjustTimeLimit,
+    handleSelectDailyLimit,
+    handleSelectDailyTimeLimit,
+    timeSavedMins,
+    walkingStepsEquivalent,
+  ]);
+  const renderTimersTab = () => memoizedTimersTab;
 
-  // Render Block App & Focus Tab
-  const renderBlockTab = () => (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} removeClippedSubviews={true} overScrollMode="never">
+  // Render Block App & Focus Tab (Memoized)
+  const memoizedBlockTab = useMemo(() => {
+    if (activeTab !== 'block') return null;
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+      >
       <Text style={styles.tabScreenTitle}>Block & Focus Shield</Text>
       <Text style={styles.tabScreenSubtitle}>
         Instantly lock distracting video feeds when you need deep focus or rest.
@@ -3091,6 +3583,37 @@ function App() {
         </View>
       </View>
 
+      {/* Quick Focus Soundscape Companion */}
+      <View style={[styles.focusSoundscapeBar, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
+        <View style={styles.focusSoundscapeLeft}>
+          <AppIcon name="wave" size={16} color={currentTheme.primary} />
+          <Text style={[styles.focusSoundscapeTitle, { color: currentTheme.primary }]}>
+            {soundscapePlaying ? `Ambient: ${soundscapesList.find(s => s.id === soundscape)?.name}` : 'Procedural Soundscape'}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => {
+            triggerDockHaptic();
+            toggleSoundscapeAudio();
+          }}
+          style={[
+            styles.focusSoundscapeBtn,
+            soundscapePlaying
+              ? [styles.focusSoundscapeBtnActive, { backgroundColor: currentTheme.primary, borderColor: currentTheme.primary }]
+              : [styles.focusSoundscapeBtnIdle, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+          ]}
+        >
+          <Text
+            style={[
+              styles.focusSoundscapeBtnText,
+              { color: soundscapePlaying ? currentTheme.background : currentTheme.primary },
+            ]}
+          >
+            {soundscapePlaying ? '⏸ Stop Audio' : '▶ Play Noise'}
+          </Text>
+        </Pressable>
+      </View>
+
       {/* Craving SOS / Urge Surfer Action Banner */}
       <View style={[styles.cravingSosBanner, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
         <View style={styles.cravingSosHeaderRow}>
@@ -3142,7 +3665,7 @@ function App() {
             resetStroop();
             openCravingModal('stroop');
           }}
-          style={[styles.interceptActionBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border, borderWidth: 1 }]}
+          style={[styles.interceptActionBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
         >
           <Text style={[styles.interceptActionBtnText, { color: currentTheme.actionText }]}>⚡ Challenge Urge with Stroop Test (+40 XP) →</Text>
         </Pressable>
@@ -3356,7 +3879,7 @@ function App() {
       />
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.cardHeaderTitleGroup}>
             <AppIcon name="wave" size={20} color={currentTheme.primary} />
             <Text style={styles.cardSectionTitle}>Focus Soundscapes</Text>
           </View>
@@ -3406,7 +3929,7 @@ function App() {
           ))}
         </View>
         {soundscapePlaying && (
-          <View style={[styles.equalizerRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline, borderWidth: 1 }]}>
+          <View style={[styles.equalizerRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
             <View style={[styles.eqBar, styles.eqBar1, { backgroundColor: currentTheme.primary }]} />
             <View style={[styles.eqBar, styles.eqBar2, { backgroundColor: currentTheme.primary }]} />
             <View style={[styles.eqBar, styles.eqBar3, { backgroundColor: currentTheme.primary }]} />
@@ -3466,11 +3989,43 @@ function App() {
         </View>
       </View>
     </ScrollView>
-  );
+    );
+  }, [
+    activeTab,
+    focusTimerRunning,
+    focusTimerSeconds,
+    blockInstagram,
+    blockTikTok,
+    blockYouTube,
+    blockSnapchat,
+    soundscape,
+    soundscapePlaying,
+    soundscapeDurationMins,
+    chronoShield,
+    currentTheme,
+    dopamineFastActive,
+    focusModeActive,
+    getBlockedPackagesList,
+    handleAdjustFocusTimer,
+    handleSelectFocusPreset,
+    handleToggleAllApps,
+    handleToggleBlockApp,
+    handleToggleFocusSession,
+    toggleSoundscapeAudio,
+  ]);
+  const renderBlockTab = () => memoizedBlockTab;
 
-  // Render Settings Tab
-  const renderSettingsTab = () => (
-    <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} removeClippedSubviews={true} overScrollMode="never">
+  // Render Settings Tab (Memoized)
+  const memoizedSettingsTab = useMemo(() => {
+    if (activeTab !== 'settings') return null;
+
+    return (
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        scrollEventThrottle={16}
+      >
       <Text style={styles.tabScreenTitle}>Settings & Wellbeing Growth</Text>
       <Text style={styles.tabScreenSubtitle}>
         Cultivate attention mastery, review your vitality score, and manage device permissions.
@@ -3859,7 +4414,7 @@ function App() {
       {/* Sanctuary Theme Atmospheric Palette Showcase */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.cardHeaderTitleGroup}>
             <AppIcon name="palette" size={19} color={currentTheme.primary} />
             <Text style={styles.cardSectionTitle}>Sanctuary Atmosphere</Text>
           </View>
@@ -3917,16 +4472,17 @@ function App() {
                 <View
                   style={[
                     styles.themeCardStatusPill,
-                    {
-                      backgroundColor: isSelected ? t.glow : 'rgba(255, 255, 255, 0.03)',
-                      borderColor: isSelected ? t.border : 'rgba(255, 255, 255, 0.06)',
-                    },
+                    isSelected
+                      ? [styles.themeCardStatusPillSelected, { backgroundColor: t.glow, borderColor: t.border }]
+                      : styles.themeCardStatusPillIdle,
                   ]}
                 >
                   <Text
                     style={[
                       styles.themeCardStatusText,
-                      { color: isSelected ? t.primary : '#64748b' },
+                      isSelected
+                        ? [styles.themeCardStatusTextSelected, { color: t.primary }]
+                        : styles.themeCardStatusTextIdle,
                     ]}
                   >
                     {isSelected ? '✓ Active Theme' : 'Tap to Activate'}
@@ -4004,11 +4560,37 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.20</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.23</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
-  );
+    );
+  }, [
+    activeTab,
+    themeAccent,
+    hudStyle,
+    prototypeStatus,
+    zenLevel,
+    xpInCurrentLevel,
+    xpNeededForLevel,
+    xpPercent,
+    currentTheme,
+    dailyLimit,
+    dailyQuestsClaimed.compass,
+    dailyQuestsClaimed.reset,
+    dailyQuestsClaimed.shield,
+    focusTimerRunning,
+    handleQuickFocus15m,
+    milestones,
+    mindfulStreak,
+    selectedIntention,
+    shareMindfulProgress,
+    todayMood,
+    totalShorts,
+    vitalityScore,
+    zenXp,
+  ]);
+  const renderSettingsTab = () => memoizedSettingsTab;
 
   return (
     <SafeAreaProvider>
@@ -4032,46 +4614,10 @@ function App() {
                 },
               ]}
             >
-              {visitedTabs.counter && (
-                <View
-                  style={[
-                    styles.tabContentScreen,
-                    activeTab !== 'counter' && styles.tabContentHidden,
-                  ]}
-                >
-                  {renderCounterTab()}
-                </View>
-              )}
-              {visitedTabs.timers && (
-                <View
-                  style={[
-                    styles.tabContentScreen,
-                    activeTab !== 'timers' && styles.tabContentHidden,
-                  ]}
-                >
-                  {renderTimersTab()}
-                </View>
-              )}
-              {visitedTabs.block && (
-                <View
-                  style={[
-                    styles.tabContentScreen,
-                    activeTab !== 'block' && styles.tabContentHidden,
-                  ]}
-                >
-                  {renderBlockTab()}
-                </View>
-              )}
-              {visitedTabs.settings && (
-                <View
-                  style={[
-                    styles.tabContentScreen,
-                    activeTab !== 'settings' && styles.tabContentHidden,
-                  ]}
-                >
-                  {renderSettingsTab()}
-                </View>
-              )}
+              {activeTab === 'counter' && renderCounterTab()}
+              {activeTab === 'timers' && renderTimersTab()}
+              {activeTab === 'block' && renderBlockTab()}
+              {activeTab === 'settings' && renderSettingsTab()}
             </Animated.View>
 
             {/* Quick Action Dismiss Backdrop */}
@@ -4201,7 +4747,7 @@ function App() {
               <Animated.View
                 ref={dockWrapRef}
                 testID="liquid-dock"
-                pointerEvents="box-only"
+                pointerEvents="auto"
                 style={[
                   styles.liquidDockPill,
                   {
@@ -4315,9 +4861,19 @@ function App() {
                       accessibilityRole="tab"
                       accessibilityLabel={tab.label}
                       accessibilityState={{ selected: isTabActive }}
+                      onTouchStart={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                        longPressTimerRef.current = setTimeout(() => {
+                          openQuickActions(idx);
+                        }, 450);
+                      }}
                       onTouchEnd={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                         triggerDockHaptic();
                         setActiveTab(tab.id);
+                      }}
+                      onTouchCancel={() => {
+                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                       }}
                       style={[
                         styles.dockTabItem,
@@ -4399,7 +4955,7 @@ function App() {
                           <View
                             style={[
                               styles.dockMicroDot,
-                              { backgroundColor: isOverLimit ? '#ef4444' : '#f59e0b' },
+                              isOverLimit ? styles.dockMicroDotOverLimit : styles.dockMicroDotNearLimit,
                             ]}
                           />
                         )}
@@ -4436,29 +4992,29 @@ function App() {
                       </Text>
 
                       {/* Living Breathing Active Droplet Indicator */}
-                      <Animated.View
-                        pointerEvents="none"
-                        style={[
-                          styles.dockActiveDroplet,
-                          {
-                            backgroundColor: currentTheme.primary,
-                            transform: [
-                              {
-                                scale: dropletPulseAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [1.0, 1.45],
-                                }),
-                              },
-                            ],
-                            opacity: isTabActive
-                              ? dropletPulseAnim.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [0.75, 1.0],
-                                })
-                              : 0,
-                          },
-                        ]}
-                      />
+                      {isTabActive && (
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[
+                            styles.dockActiveDroplet,
+                            {
+                              backgroundColor: currentTheme.primary,
+                              transform: [
+                                {
+                                  scale: dropletPulseAnim.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [1.0, 1.45],
+                                  }),
+                                },
+                              ],
+                              opacity: dropletPulseAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.75, 1.0],
+                              }),
+                            },
+                          ]}
+                        />
+                      )}
                     </Animated.View>
                   );
                 })}
@@ -4486,7 +5042,7 @@ function App() {
               </Text>
 
               {/* 4-Mode Switcher */}
-              <View style={[styles.modalTabRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline, borderWidth: 1 }]}>
+              <View style={[styles.modalTabRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
                 <Pressable
                   onPress={() => {
                     triggerDockHaptic();
@@ -4494,7 +5050,7 @@ function App() {
                   }}
                   style={[
                     styles.modalTabBtn,
-                    cravingTab === 'breathing' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border, borderWidth: 1 }],
+                    cravingTab === 'breathing' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
                   ]}
                 >
                   <Text
@@ -4999,6 +5555,7 @@ const styles = StyleSheet.create({
   interceptActionBtn: {
     backgroundColor: '#4f46e5',
     borderRadius: 12,
+    borderWidth: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
@@ -5491,6 +6048,274 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  introSegmentedRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  introSegmentItem: {
+    flex: 1,
+  },
+  introSegmentBar: {
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 4,
+  },
+  introSegmentLabel: {
+    fontSize: 10,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  introInteractiveSection: {
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  introSectionMiniTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  introGoalRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  introGoalOptionCard: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  introGoalOptionIcon: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  introGoalOptionCap: {
+    color: '#f1f5f3',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  introGoalOptionLabel: {
+    color: '#e1e9e4',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  introGoalOptionSub: {
+    color: '#8aa395',
+    fontSize: 9,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  introHudSimulatorCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  introHudSimHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  introHudSimTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  introHudSimBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  introHudSimBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  introHudSimStage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    backgroundColor: '#050706',
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  introHudPreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: 'rgba(10, 15, 12, 0.95)',
+  },
+  introHudPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  introHudPillText: {
+    color: '#f1f5f3',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  introHudPillCounterBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  introHudPillCounterVal: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  introSimulateSwipeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  introSimulateSwipeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  introSimulateHelpText: {
+    color: '#8aa395',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  introShieldsBox: {
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  introShieldRow: {
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  introShieldCol: {
+    flex: 1,
+  },
+  introShieldTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  introShieldTitle: {
+    color: '#f1f5f3',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  introShieldActiveTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  introShieldActiveTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  introShieldDesc: {
+    color: '#8aa395',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  introShieldRowSpaced: {
+    marginTop: 10,
+  },
+  introShieldTagActive: {
+    backgroundColor: 'rgba(56, 211, 159, 0.12)',
+  },
+  introShieldTagIdle: {
+    backgroundColor: '#1a1f1c',
+  },
+  introShieldTagTextActive: {
+    color: '#38d39f',
+  },
+  introShieldTagTextIdle: {
+    color: '#64748b',
+  },
+  introSegmentBarActive: {
+    backgroundColor: '#38d39f',
+  },
+  introSegmentLabelActive: {
+    fontWeight: '800',
+  },
+  introSegmentLabelInactive: {
+    color: '#5c7266',
+    fontWeight: '600',
+  },
+  introSetupGuideCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  introSetupGuideHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  introSetupStepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  introSetupStepNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introSetupStepNumText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  introSetupStepText: {
+    color: '#8aa395',
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
+  },
+  introCelebrationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  introCelebrationCol: {
+    flex: 1,
+  },
+  introCelebrationTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  introCelebrationSub: {
+    color: '#a3b8ac',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
   introHeroIllustration: {
     width: '100%',
     height: 210,
@@ -5628,6 +6453,162 @@ const styles = StyleSheet.create({
   },
   servicePillTextInactive: {
     color: '#8aa395',
+  },
+
+  dashboardHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dashboardHudPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  dashboardHudPillActive: {
+    backgroundColor: 'rgba(52, 199, 89, 0.12)',
+    borderColor: 'rgba(52, 199, 89, 0.4)',
+  },
+  dashboardHudPillInactive: {
+    backgroundColor: '#1b2420',
+    borderColor: '#374740',
+  },
+  dashboardHudPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  dashboardCompassStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  dashboardCompassLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+  dashboardCompassIcon: {
+    fontSize: 20,
+  },
+  dashboardCompassEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  dashboardCompassTitle: {
+    color: '#e0ece4',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  dashboardCompassContent: {
+    flex: 1,
+  },
+  dashboardZenBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  dashboardZenBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  focusSoundscapeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  focusSoundscapeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  focusSoundscapeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  focusSoundscapeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  focusSoundscapeBtnActive: {},
+  focusSoundscapeBtnIdle: {},
+  focusSoundscapeBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  heroTargetStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  heroStepperBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  heroStepperBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  heroTargetPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: '#0e1511',
+    borderWidth: 1,
+    borderColor: '#1d2720',
+  },
+  heroTargetPillLabel: {
+    color: '#8aa395',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroTargetPillVal: {
+    fontWeight: '800',
+  },
+  heroMindfulInsightBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 14,
+  },
+  heroMindfulInsightIcon: {
+    fontSize: 18,
+  },
+  heroMindfulInsightText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
+    fontWeight: '600',
   },
 
   // Dashboard Shortcuts Row
@@ -6058,6 +7039,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  cardHeaderTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardSectionTitle: {
     color: '#f1f5f3',
     fontSize: 17,
@@ -6087,6 +7073,68 @@ const styles = StyleSheet.create({
   platformCardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  platformExpandedSection: {
+    paddingTop: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+  },
+  platformQuotaAdjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  platformQuotaAdjustLabel: {
+    color: '#8aa395',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  platformQuotaStepBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  platformQuotaStepBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  platformQuotaBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  platformQuotaBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  weeklyRhythmSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 14,
+  },
+  weeklySummaryEmoji: {
+    fontSize: 20,
+  },
+  weeklySummaryCol: {
+    flex: 1,
+  },
+  weeklySummaryTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  weeklySummarySubtitle: {
+    color: '#a3b8ac',
+    fontSize: 11,
+    lineHeight: 15,
   },
   platformActionPillRow: {
     flexDirection: 'row',
@@ -6804,6 +7852,12 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
+  dockMicroDotOverLimit: {
+    backgroundColor: '#ef4444',
+  },
+  dockMicroDotNearLimit: {
+    backgroundColor: '#f59e0b',
+  },
   dockMicroShieldActiveBadge: {
     position: 'absolute',
     top: -4,
@@ -7125,11 +8179,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   buttonDisabled: { backgroundColor: '#1d2e25' },
+  buttonConsentActive: {},
+  buttonConsentDisabled: {
+    backgroundColor: '#141414',
+    borderColor: '#222222',
+  },
   buttonText: {
     color: '#090e0c',
     fontSize: 15,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  buttonTextConsentActive: {},
+  buttonTextConsentDisabled: {
+    color: '#666666',
   },
   settingsHint: {
     color: '#5b7367',
@@ -7515,6 +8578,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#090e0c',
     borderRadius: 12,
+    borderWidth: 1,
     padding: 4,
     marginBottom: 16,
     width: '100%',
@@ -7527,6 +8591,7 @@ const styles = StyleSheet.create({
   },
   modalTabBtnActive: {
     backgroundColor: '#1b2d24',
+    borderWidth: 1,
   },
   modalTabBtnText: {
     color: '#6e8579',
@@ -7924,6 +8989,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#0a1410',
     borderRadius: 10,
+    borderWidth: 1,
   },
   eqBar: {
     width: 4,
@@ -8014,10 +9080,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  themeCardStatusPillSelected: {},
+  themeCardStatusPillIdle: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
   themeCardStatusText: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  themeCardStatusTextSelected: {},
+  themeCardStatusTextIdle: {
+    color: '#64748b',
   },
   activeThemeBadgePill: {
     paddingHorizontal: 9,

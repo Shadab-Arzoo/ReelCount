@@ -29,6 +29,10 @@ jest.mock('../src/native/PrototypeSettings', () => ({
     resetCounters: jest.fn().mockResolvedValue(null),
     setThemeAccent: jest.fn().mockResolvedValue(true),
     setOnboardingCompleted: jest.fn().mockResolvedValue(true),
+    playSoundscape: jest.fn().mockResolvedValue(true),
+    stopSoundscape: jest.fn().mockResolvedValue(true),
+    setFloatingHudStyle: jest.fn().mockResolvedValue(true),
+    setPackageLimit: jest.fn().mockResolvedValue(true),
   },
   TARGET_PACKAGES: {
     INSTAGRAM: 'com.instagram.android',
@@ -77,6 +81,83 @@ test('requires an explicit opt-in before opening Android accessibility settings'
   await ReactTestRenderer.act(() => continueButton.props.onPress());
   expect(PrototypeSettings.openAccessibilitySettings).toHaveBeenCalledTimes(1);
   await ReactTestRenderer.act(() => renderer!.unmount());
+});
+
+test('supports interactive intro onboarding: intention goals, HUD simulator, and setup guide', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+  });
+
+  const allTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+
+  // Check top story / step progress indicators
+  expect(allTexts).toContain('Intention');
+  expect(allTexts).toContain('Tactile HUD');
+  expect(allTexts).toContain('Sanctuary');
+  expect(allTexts).toContain('Activate');
+
+  // Verify interactive boundary goal presets exist on Slide 1
+  expect(allTexts).toContain('CHOOSE YOUR DAILY MINDFUL BOUNDARY');
+  expect(allTexts).toContain('Strict Detox');
+  expect(allTexts).toContain('Balanced');
+  expect(allTexts).toContain('Gentle');
+
+  // Tap "Strict Detox" (25 reels)
+  const detoxNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'Strict Detox');
+  expect(detoxNode).toBeDefined();
+
+  let detoxCard = detoxNode!.parent;
+  while (detoxCard && !detoxCard.props.onPress) {
+    detoxCard = detoxCard.parent;
+  }
+  expect(detoxCard).toBeDefined();
+  await ReactTestRenderer.act(() => detoxCard!.props.onPress());
+  expect(PrototypeSettings.setDailyLimits).toHaveBeenCalledWith(25, 30);
+
+  // Verify interactive HUD simulator
+  expect(allTexts).toContain('Interactive Floating HUD Simulator');
+  expect(allTexts).toContain('LIVE PREVIEW');
+  expect(allTexts).toContain('⚡ Tap to Simulate Video Swipe (+1)');
+
+  // Tap HUD swipe simulator button
+  const simulateNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => typeof node.props.children === 'string' && node.props.children.includes('Tap to Simulate Video Swipe (+1)'));
+  expect(simulateNode).toBeDefined();
+
+  let simBtn = simulateNode!.parent;
+  while (simBtn && !simBtn.props.onPress) {
+    simBtn = simBtn.parent;
+  }
+  expect(simBtn).toBeDefined();
+  await ReactTestRenderer.act(async () => {
+    simBtn!.props.onPress();
+  });
+
+  // Check that the swipe simulation updated count from 2 to 3 swipes
+  const updatedTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(updatedTexts).toContain('3 swipes');
+
+  // Verify 3-step setup guide on slide 4
+  expect(updatedTexts).toContain('3-STEP ANDROID SETUP (TAKES 5 SECONDS)');
+  expect(updatedTexts).toContain('Downloaded apps');
+  expect(updatedTexts).toContain('ReelCount Tracker');
+
+  await ReactTestRenderer.act(async () => {
+    renderer!.unmount();
+  });
 });
 
 test('allows switching themes in the Sanctuary Atmosphere showcase', async () => {
@@ -161,6 +242,123 @@ test('allows switching themes in the Sanctuary Atmosphere showcase', async () =>
 
   // Assert PrototypeSettings.setThemeAccent was invoked with 'rose'
   expect(PrototypeSettings.setThemeAccent).toHaveBeenCalledWith('rose');
+
+  // Switch back from Settings to Dashboard tab
+  const dashboardTab = renderer!.root.findByProps({ testID: 'dock-tab-counter' });
+  expect(dashboardTab).toBeDefined();
+  await ReactTestRenderer.act(() => dashboardTab.props.onTouchEnd());
+
+  // Verify dashboard screen is visible and active again
+  const returnedTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(returnedTexts).toContain('ReelCount');
+  expect(returnedTexts).toContain('Platform Breakdown');
+  expect(returnedTexts).toContain('Weekly Rhythm');
+
+  await ReactTestRenderer.act(() => renderer!.unmount());
+});
+
+test('supports focus mode soundscapes and limit steppers', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+  });
+
+  // Skip intro to enter dashboard
+  const skipTextNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'Skip →');
+  let skipButton = skipTextNode!.parent;
+  while (skipButton && !skipButton.props.onPress) {
+    skipButton = skipButton.parent;
+  }
+  await ReactTestRenderer.act(() => skipButton!.props.onPress());
+
+  // Enter dashboard
+  const enterBtnText = renderer!.root
+    .findAllByType(Text)
+    .find(
+      node =>
+        typeof node.props.children === 'string' &&
+        node.props.children.includes('Dashboard →'),
+    );
+  let enterBtn = enterBtnText!.parent;
+  while (enterBtn && !enterBtn.props.onPress) {
+    enterBtn = enterBtn.parent;
+  }
+  await ReactTestRenderer.act(() => enterBtn!.props.onPress());
+
+  // Verify Daily Compass is visible on dashboard
+  const dashTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(dashTexts).toContain('DAILY COMPASS');
+
+  // Switch to Focus tab (block)
+  const focusTab = renderer!.root.findByProps({ testID: 'dock-tab-block' });
+  expect(focusTab).toBeDefined();
+  await ReactTestRenderer.act(() => focusTab.props.onTouchEnd());
+
+  // Verify Focus screen has Procedural Soundscape companion
+  const blockTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(blockTexts).toContain('Block & Focus Shield');
+  expect(blockTexts).toContain('DEEP WORK FOCUS SHIELD');
+  expect(blockTexts).toContain('Procedural Soundscape');
+
+  // Tap "▶ Play Noise" soundscape button
+  const playNoiseNode = renderer!.root
+    .findAllByType(Text)
+    .find(
+      node =>
+        typeof node.props.children === 'string' &&
+        node.props.children.includes('Play Noise'),
+    );
+  expect(playNoiseNode).toBeDefined();
+
+  let playNoiseBtn = playNoiseNode!.parent;
+  while (playNoiseBtn && !playNoiseBtn.props.onPress) {
+    playNoiseBtn = playNoiseBtn.parent;
+  }
+  expect(playNoiseBtn).toBeDefined();
+  await ReactTestRenderer.act(() => playNoiseBtn!.props.onPress());
+  expect(PrototypeSettings.playSoundscape).toHaveBeenCalledWith('rain', 25);
+
+  // Switch to Limits tab (timers)
+  const limitsTab = renderer!.root.findByProps({ testID: 'dock-tab-timers' });
+  expect(limitsTab).toBeDefined();
+  await ReactTestRenderer.act(() => limitsTab.props.onTouchEnd());
+
+  // Verify Limits screen
+  const limitTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(limitTexts).toContain('Daily Shorts Target');
+
+  // Tap "+ 5" stepper
+  const stepperPlusNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === '+ 5');
+  expect(stepperPlusNode).toBeDefined();
+
+  let plusBtn = stepperPlusNode!.parent;
+  while (plusBtn && !plusBtn.props.onPress) {
+    plusBtn = plusBtn.parent;
+  }
+  expect(plusBtn).toBeDefined();
+  await ReactTestRenderer.act(() => plusBtn!.props.onPress());
+  expect(PrototypeSettings.setDailyLimits).toHaveBeenCalledWith(55, 30);
 
   await ReactTestRenderer.act(() => renderer!.unmount());
 });

@@ -74,6 +74,10 @@ class ReelCountPreferences private constructor(context: Context) {
 
   // --- Persistent Counting & 7-Day History ---
 
+  @Volatile private var cached7DayHistory: List<DayCount>? = null
+  @Volatile private var cachedHistoryDate: String? = null
+  @Volatile private var cachedTodayCount: Int = -1
+
   @Synchronized
   fun incrementCount(packageName: String): Int {
     val today = getTodayKey()
@@ -88,12 +92,21 @@ class ReelCountPreferences private constructor(context: Context) {
       .putInt(pkgKey, newPkgCount)
       .apply()
 
+    cachedTodayCount = newTotal
+    cachedHistoryDate = today
+    cached7DayHistory = null
     return newTotal
   }
 
   fun getTodayCount(): Int {
     val today = getTodayKey()
-    return prefs.getInt("count_${today}_total", 0)
+    if (cachedTodayCount >= 0 && cachedHistoryDate == today) {
+      return cachedTodayCount
+    }
+    val count = prefs.getInt("count_${today}_total", 0)
+    cachedTodayCount = count
+    cachedHistoryDate = today
+    return count
   }
 
   fun getTodayPackageCount(packageName: String): Int {
@@ -101,6 +114,7 @@ class ReelCountPreferences private constructor(context: Context) {
     return prefs.getInt("count_${today}_$packageName", 0)
   }
 
+  @Synchronized
   fun resetTodayCounts() {
     val today = getTodayKey()
     val editor = prefs.edit()
@@ -109,11 +123,20 @@ class ReelCountPreferences private constructor(context: Context) {
       editor.putInt("count_${today}_$pkg", 0)
     }
     editor.apply()
+    cachedTodayCount = 0
+    cachedHistoryDate = today
+    cached7DayHistory = null
   }
 
+  @Synchronized
   fun get7DayHistory(): List<DayCount> {
+    val today = getTodayKey()
+    val cached = cached7DayHistory
+    if (cached != null && cachedHistoryDate == today) {
+      return cached
+    }
+
     val result = mutableListOf<DayCount>()
-    val cal = java.util.Calendar.getInstance()
     val dayNames = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
     for (i in 6 downTo 0) {
@@ -125,6 +148,8 @@ class ReelCountPreferences private constructor(context: Context) {
       val count = prefs.getInt("count_${dateStr}_total", 0)
       result.add(DayCount(dateStr, dayLabel, count))
     }
+    cached7DayHistory = result
+    cachedHistoryDate = today
     return result
   }
 
