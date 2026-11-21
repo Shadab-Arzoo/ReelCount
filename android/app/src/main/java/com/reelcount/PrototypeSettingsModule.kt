@@ -166,7 +166,7 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
   @ReactMethod
   fun playSoundscape(soundscape: String, durationMinutes: Int, promise: Promise) {
     try {
-      com.reelcount.soundscape.ProceduralSoundscapePlayer.play(soundscape)
+      com.reelcount.soundscape.ProceduralSoundscapePlayer.play(soundscape, durationMinutes)
       promise.resolve(true)
     } catch (e: Exception) {
       promise.reject("SOUNDSCAPE_ERROR", e.message, e)

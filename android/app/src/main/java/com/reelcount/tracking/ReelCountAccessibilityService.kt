@@ -155,7 +155,6 @@ class ReelCountAccessibilityService : AccessibilityService() {
     val rootNode = if (
       event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
       event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
-      event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
       event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
     ) {
       try {
@@ -277,11 +276,18 @@ class ReelCountAccessibilityService : AccessibilityService() {
           builder.setContentIntent(launchPendingIntent)
         }
 
-        builder.addAction(
-          android.R.drawable.ic_lock_idle_lock,
-          "⚡ Focus 15m",
-          focusPendingIntent
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+          val icon = android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_lock_idle_lock)
+          val action = android.app.Notification.Action.Builder(icon, "⚡ Focus 15m", focusPendingIntent).build()
+          builder.addAction(action)
+        } else {
+          @Suppress("DEPRECATION")
+          builder.addAction(
+            android.R.drawable.ic_lock_idle_lock,
+            "⚡ Focus 15m",
+            focusPendingIntent
+          )
+        }
 
         nm.notify(NOTIFICATION_STATUS_ID, builder.build())
       }

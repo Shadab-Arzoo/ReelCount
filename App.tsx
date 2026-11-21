@@ -622,6 +622,7 @@ function App() {
   const rippleX = useRef(new Animated.Value(0)).current;
   const rippleY = useRef(new Animated.Value(0)).current;
   const tooltipVisibleRef = useRef(false);
+  const eqPulseAnim = useRef(new Animated.Value(0)).current;
 
   // Icon bounce animations
   const iconBounceAnims = useRef([
@@ -779,6 +780,34 @@ function App() {
     pulse.start();
     return () => pulse.stop();
   }, [dropletPulseAnim]);
+
+  useEffect(() => {
+    let anim: Animated.CompositeAnimation | null = null;
+    if (soundscapePlaying) {
+      anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(eqPulseAnim, {
+            toValue: 1,
+            duration: 650,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(eqPulseAnim, {
+            toValue: 0,
+            duration: 650,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      anim.start();
+    } else {
+      eqPulseAnim.setValue(0);
+    }
+    return () => {
+      anim?.stop();
+    };
+  }, [soundscapePlaying, eqPulseAnim]);
 
   // 4 tabs scale, translateY, and tilt
   const tabScaleAnims = useRef([
@@ -3999,10 +4028,74 @@ function App() {
         </View>
         {soundscapePlaying && (
           <View style={[styles.equalizerRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <View style={[styles.eqBar, styles.eqBar1, { backgroundColor: currentTheme.primary }]} />
-            <View style={[styles.eqBar, styles.eqBar2, { backgroundColor: currentTheme.primary }]} />
-            <View style={[styles.eqBar, styles.eqBar3, { backgroundColor: currentTheme.primary }]} />
-            <View style={[styles.eqBar, styles.eqBar4, { backgroundColor: currentTheme.primary }]} />
+            <Animated.View
+              style={[
+                styles.eqBar,
+                styles.eqBar1,
+                {
+                  backgroundColor: currentTheme.primary,
+                  transform: [
+                    {
+                      scaleY: eqPulseAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.6, 1.4],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.eqBar,
+                styles.eqBar2,
+                {
+                  backgroundColor: currentTheme.primary,
+                  transform: [
+                    {
+                      scaleY: eqPulseAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [1.3, 0.7, 1.1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.eqBar,
+                styles.eqBar3,
+                {
+                  backgroundColor: currentTheme.primary,
+                  transform: [
+                    {
+                      scaleY: eqPulseAnim.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.8, 1.4, 0.9],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.eqBar,
+                styles.eqBar4,
+                {
+                  backgroundColor: currentTheme.primary,
+                  transform: [
+                    {
+                      scaleY: eqPulseAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1.2, 0.5],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
             <Text style={[styles.eqLabel, { color: currentTheme.subtext }]}>
               Playing {soundscapesList.find(s => s.id === soundscape)?.name} ({soundscapeDurationMins}m session)
             </Text>
@@ -4081,6 +4174,7 @@ function App() {
     handleToggleBlockApp,
     handleToggleFocusSession,
     toggleSoundscapeAudio,
+    eqPulseAnim,
   ]);
   const renderBlockTab = () => memoizedBlockTab;
 
@@ -4629,7 +4723,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.25</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.28</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>

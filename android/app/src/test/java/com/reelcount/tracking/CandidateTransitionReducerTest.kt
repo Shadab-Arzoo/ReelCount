@@ -246,6 +246,47 @@ class CandidateTransitionReducerTest {
     assertFalse(reducer.reduce(release))
   }
 
+  @Test
+  fun swipingBackToRecentReelWithinHistoryDoesNotInflateCount() {
+    val reel1 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 1_000L,
+      reelFingerprint = "creator1||song1||clip1",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel1))
+
+    val reel2 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 2_000L,
+      reelFingerprint = "creator2||song2||clip2",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel2))
+
+    // Swiping back up to reel1 (which is in recent history) should NOT count as a new reel!
+    val swipeBackToReel1 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 3_000L,
+      reelFingerprint = "creator1||song1||clip1",
+      isCommentInteraction = false
+    )
+    assertFalse(reducer.reduce(swipeBackToReel1))
+
+    // But swiping down to a completely new reel3 DOES count!
+    val reel3 = EventMetadata(
+      eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+      packageName = TargetPackages.INSTAGRAM,
+      timestamp = 4_000L,
+      reelFingerprint = "creator3||song3||clip3",
+      isCommentInteraction = false
+    )
+    assertTrue(reducer.reduce(reel3))
+  }
+
   private fun event(type: Int, packageName: String, timestamp: Long) =
     EventMetadata(type, packageName, timestamp)
 }

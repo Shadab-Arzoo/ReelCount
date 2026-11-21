@@ -368,7 +368,7 @@ internal class ShortVideoDetector {
   }
 
   private companion object {
-    const val MAX_SEARCH_DEPTH = 7
-    const val MAX_SEARCH_NODES = 75
+    const val MAX_SEARCH_DEPTH = 6
+    const val MAX_SEARCH_NODES = 50
   }
 }

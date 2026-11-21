@@ -19,7 +19,9 @@ class ReelCountPreferences private constructor(context: Context) {
 
   private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
-  private fun getTodayKey(): String = dateFormat.format(Date())
+  private fun getTodayKey(): String = synchronized(dateFormat) {
+    dateFormat.format(Date())
+  }
 
   // --- Focus Mode & Blocking ---
 
@@ -143,7 +145,7 @@ class ReelCountPreferences private constructor(context: Context) {
       val c = java.util.Calendar.getInstance().apply {
         add(java.util.Calendar.DAY_OF_YEAR, -i)
       }
-      val dateStr = dateFormat.format(c.time)
+      val dateStr = synchronized(dateFormat) { dateFormat.format(c.time) }
       val dayLabel = if (i == 0) "Today" else dayNames[c.get(java.util.Calendar.DAY_OF_WEEK) - 1]
       val count = prefs.getInt("count_${dateStr}_total", 0)
       result.add(DayCount(dateStr, dayLabel, count))

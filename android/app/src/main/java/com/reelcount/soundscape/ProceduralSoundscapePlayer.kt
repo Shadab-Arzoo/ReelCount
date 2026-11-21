@@ -31,14 +31,21 @@ object ProceduralSoundscapePlayer {
 
   private var audioTrack: AudioTrack? = null
   private var audioThread: Thread? = null
+  private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+  private val stopRunnable = Runnable { stop() }
 
   @Synchronized
-  fun play(soundscape: String) {
+  fun play(soundscape: String, durationMinutes: Int = 0) {
+    mainHandler.removeCallbacks(stopRunnable)
+    if (durationMinutes > 0) {
+      mainHandler.postDelayed(stopRunnable, durationMinutes * 60 * 1000L)
+    }
+
     if (isPlaying && currentSoundscape == soundscape) {
       return
     }
 
-    stop()
+    stopInternal()
 
     currentSoundscape = soundscape
     isPlaying = true
@@ -81,6 +88,11 @@ object ProceduralSoundscapePlayer {
 
   @Synchronized
   fun stop() {
+    mainHandler.removeCallbacks(stopRunnable)
+    stopInternal()
+  }
+
+  private fun stopInternal() {
     isPlaying = false
     try {
       audioThread?.interrupt()

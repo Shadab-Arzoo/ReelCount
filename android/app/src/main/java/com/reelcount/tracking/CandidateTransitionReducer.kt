@@ -26,6 +26,7 @@ internal class CandidateTransitionReducer(
   private var lastReelFingerprint: String? = null
   private var pendingFallbackBinding = false
   private var fallbackCandidateTimestamp: Long? = null
+  private val recentFingerprints = java.util.ArrayDeque<String>(MAX_RECENT_FINGERPRINTS)
 
   fun reduce(event: EventMetadata): Boolean {
     if (event.packageName !in TargetPackages.all) {
@@ -46,8 +47,8 @@ internal class CandidateTransitionReducer(
 
     // Fingerprint-based detection: unique video transition
     if (event.reelFingerprint != null) {
-      // Deduplicate: identical video fingerprint never counts again
-      if (event.reelFingerprint == lastReelFingerprint) {
+      // Deduplicate: identical video fingerprint or recently viewed video in this session never counts again
+      if (event.reelFingerprint == lastReelFingerprint || event.reelFingerprint in recentFingerprints) {
         return false
       }
 
@@ -57,6 +58,7 @@ internal class CandidateTransitionReducer(
         val timeSinceFallback = fallbackCandidateTimestamp?.let { event.timestamp - it } ?: Long.MAX_VALUE
         if (timeSinceFallback in 0..1200L) {
           lastReelFingerprint = event.reelFingerprint
+          recordRecentFingerprint(event.reelFingerprint)
           pendingFallbackBinding = false
           return false
         }
@@ -72,6 +74,7 @@ internal class CandidateTransitionReducer(
       }
 
       lastReelFingerprint = event.reelFingerprint
+      recordRecentFingerprint(event.reelFingerprint)
       lastCandidateTimestamp = event.timestamp
       pendingFallbackBinding = false
       return true
@@ -99,15 +102,24 @@ internal class CandidateTransitionReducer(
     return true
   }
 
+  private fun recordRecentFingerprint(fp: String) {
+    if (recentFingerprints.size >= MAX_RECENT_FINGERPRINTS) {
+      recentFingerprints.removeFirst()
+    }
+    recentFingerprints.addLast(fp)
+  }
+
   fun reset() {
     lastCandidateTimestamp = null
     lastReelFingerprint = null
     pendingFallbackBinding = false
     fallbackCandidateTimestamp = null
+    recentFingerprints.clear()
   }
 
   private companion object {
-    const val DEFAULT_DEBOUNCE_MILLIS = 600L
+    const val DEFAULT_DEBOUNCE_MILLIS = 700L
     const val MIN_FINGERPRINT_TRANSITION_MILLIS = 200L
+    const val MAX_RECENT_FINGERPRINTS = 8
   }
 }
