@@ -851,8 +851,94 @@ function App() {
     });
   };
 
+  const lastAnimatedTabIdxRef = useRef<number | null>(null);
+  const lastAnimateTimestampRef = useRef<number>(0);
+  const hasScrubbedRef = useRef(false);
+
+  const animateTabSelection = useCallback((targetIdx: number) => {
+    const now = Date.now();
+    if (now - lastAnimateTimestampRef.current < 250 && lastAnimatedTabIdxRef.current === targetIdx) {
+      return;
+    }
+    lastAnimateTimestampRef.current = now;
+    lastAnimatedTabIdxRef.current = targetIdx;
+
+    const chosenTab = TABS[targetIdx]?.id ?? 'counter';
+
+    triggerDockHaptic();
+    triggerIconBounce(targetIdx);
+    triggerDockShimmer();
+
+    // Release 3D compression with spring bounce
+    Animated.sequence([
+      Animated.timing(dockScale, {
+        toValue: 0.97,
+        duration: 60,
+        useNativeDriver: true,
+      }),
+      Animated.spring(dockScale, {
+        toValue: 1.0,
+        friction: 6,
+        tension: 140,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Fluid spring of slider towards target tab with mercury squash & stretch
+    Animated.parallel([
+      Animated.spring(sliderAnim, {
+        toValue: targetIdx,
+        friction: 6.5,
+        tension: 110,
+        useNativeDriver: true,
+      }),
+      Animated.spring(tooltipX, {
+        toValue: targetIdx,
+        friction: 6.5,
+        tension: 110,
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(sliderScaleX, {
+          toValue: 0.92,
+          duration: 70,
+          useNativeDriver: true,
+        }),
+        Animated.spring(sliderScaleX, {
+          toValue: 1.0,
+          friction: 5,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.sequence([
+        Animated.timing(sliderScaleY, {
+          toValue: 1.08,
+          duration: 70,
+          useNativeDriver: true,
+        }),
+        Animated.spring(sliderScaleY, {
+          toValue: 1.0,
+          friction: 5,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    // Smoothly elevate the selected tab and reset other tabs to resting state
+    resetDockRestingState(targetIdx);
+
+    setActiveTab(chosenTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const targetIdx = TAB_INDEX_MAP[activeTab];
+    if (lastAnimatedTabIdxRef.current === targetIdx) {
+      lastAnimatedTabIdxRef.current = null;
+      return;
+    }
     triggerDockShimmer();
     triggerIconBounce(targetIdx);
 
@@ -883,9 +969,7 @@ function App() {
       }),
     ]).start();
 
-    if (!isDraggingDock) {
-      resetDockRestingState(targetIdx);
-    }
+    resetDockRestingState(targetIdx);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
@@ -942,6 +1026,7 @@ function App() {
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gesture) => {
         isDragActiveRef.current = true;
+        hasScrubbedRef.current = false;
         setIsDraggingDock(true);
 
         const screenX = gesture.x0 || evt.nativeEvent.pageX;
@@ -950,7 +1035,6 @@ function App() {
 
         currentHoveredIdxRef.current = idx;
         setHoveredTabIndex(idx);
-        triggerDockHaptic();
 
         // Touch ripple animation inside dock using native animated driver
         rippleX.setValue(dockX);
@@ -979,19 +1063,13 @@ function App() {
           tension: 160,
           useNativeDriver: true,
         }).start();
-
-        applyContinuousFisheye(dockX, 0);
-
-        // Fluid spring of slider towards current tab on touch down
-        Animated.spring(sliderAnim, {
-          toValue: idx,
-          friction: 7,
-          tension: 160,
-          useNativeDriver: true,
-        }).start();
       },
       onPanResponderMove: (evt, gesture) => {
         if (!isDragActiveRef.current) return;
+
+        if (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3) {
+          hasScrubbedRef.current = true;
+        }
 
         const screenX =
           gesture.moveX ||
@@ -1001,8 +1079,8 @@ function App() {
         const idx = getTabIndexFromDockX(dockX);
         const fractionalPos = getFractionalPosFromDockX(dockX);
 
-        // Smoothly reveal scrub preview tooltip capsule when scrubbing starts (single trigger)
-        if (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3) {
+        if (hasScrubbedRef.current) {
+          // Smoothly reveal scrub preview tooltip capsule when scrubbing starts (single trigger)
           if (!tooltipVisibleRef.current) {
             tooltipVisibleRef.current = true;
             Animated.parallel([
@@ -1019,27 +1097,28 @@ function App() {
               }),
             ]).start();
           }
-        }
 
-        // Direct fluid tracking for Slider & Tooltip right under thumb (0ms latency, 0 physics contention)
-        sliderAnim.setValue(fractionalPos);
-        tooltipX.setValue(fractionalPos);
+          // Direct fluid tracking for Slider & Tooltip right under thumb (0ms latency, 0 physics contention)
+          sliderAnim.setValue(fractionalPos);
+          tooltipX.setValue(fractionalPos);
 
-        // Dynamic Mercury Stretch based on horizontal sliding speed
-        const speedStretch = Math.min(1.24, 1.0 + Math.abs(gesture.vx || 0) * 0.15);
-        sliderScaleX.setValue(speedStretch);
+          // Dynamic Mercury Stretch based on horizontal sliding speed
+          const speedStretch = Math.min(1.24, 1.0 + Math.abs(gesture.vx || 0) * 0.15);
+          sliderScaleX.setValue(speedStretch);
 
-        // Continuous fisheye magnification as thumb scrubs left and right
-        applyContinuousFisheye(dockX, gesture.vx || 0);
+          // Continuous fisheye magnification as thumb scrubs left and right
+          applyContinuousFisheye(dockX, gesture.vx || 0);
 
-        if (idx !== currentHoveredIdxRef.current) {
-          currentHoveredIdxRef.current = idx;
-          setHoveredTabIndex(idx);
-          triggerDockHaptic();
+          if (idx !== currentHoveredIdxRef.current) {
+            currentHoveredIdxRef.current = idx;
+            setHoveredTabIndex(idx);
+            triggerDockHaptic();
+          }
         }
       },
       onPanResponderRelease: (evt, gesture) => {
         isDragActiveRef.current = false;
+        hasScrubbedRef.current = false;
         setIsDraggingDock(false);
         tooltipVisibleRef.current = false;
 
@@ -1053,18 +1132,7 @@ function App() {
             ? currentHoveredIdxRef.current
             : getTabIndexFromDockX(dockX);
 
-        // Switch to the released tab
-        const chosenTab = TABS[finalIdx]?.id ?? 'counter';
         setHoveredTabIndex(null);
-        triggerDockHaptic();
-
-        // Release 3D compression
-        Animated.spring(dockScale, {
-          toValue: 1.0,
-          friction: 6,
-          tension: 140,
-          useNativeDriver: true,
-        }).start();
 
         // Hide Scrub Tooltip
         Animated.parallel([
@@ -1080,10 +1148,11 @@ function App() {
           }),
         ]).start();
 
-        setActiveTab(chosenTab);
+        animateTabSelection(finalIdx);
       },
       onPanResponderTerminate: () => {
         isDragActiveRef.current = false;
+        hasScrubbedRef.current = false;
         setIsDraggingDock(false);
         tooltipVisibleRef.current = false;
         setHoveredTabIndex(null);
@@ -4560,7 +4629,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.23</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.24</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -4869,8 +4938,7 @@ function App() {
                       }}
                       onTouchEnd={() => {
                         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                        triggerDockHaptic();
-                        setActiveTab(tab.id);
+                        animateTabSelection(idx);
                       }}
                       onTouchCancel={() => {
                         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
