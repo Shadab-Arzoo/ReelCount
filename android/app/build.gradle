@@ -82,8 +82,8 @@ android {
         applicationId "com.reelcount"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 33
-        versionName "0.4.33"
+        versionCode 35
+        versionName "0.4.35"
     }
     signingConfigs {
         debug {
