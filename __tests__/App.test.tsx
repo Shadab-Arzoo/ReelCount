@@ -33,6 +33,12 @@ jest.mock('../src/native/PrototypeSettings', () => ({
     stopSoundscape: jest.fn().mockResolvedValue(true),
     setFloatingHudStyle: jest.fn().mockResolvedValue(true),
     setPackageLimit: jest.fn().mockResolvedValue(true),
+    setGrayscaleFilter: jest.fn().mockResolvedValue(true),
+    setFidgetSwipeDetector: jest.fn().mockResolvedValue(true),
+    setConsciousExitEnabled: jest.fn().mockResolvedValue(true),
+    setRealityCheckEnabled: jest.fn().mockResolvedValue(true),
+    recordMicroLog: jest.fn().mockResolvedValue(true),
+    getMicroLogsJson: jest.fn().mockResolvedValue('[]'),
   },
   TARGET_PACKAGES: {
     INSTAGRAM: 'com.instagram.android',
@@ -125,7 +131,7 @@ test('supports interactive intro onboarding: intention goals, HUD simulator, and
   // Verify interactive HUD simulator
   expect(allTexts).toContain('Interactive Floating HUD Simulator');
   expect(allTexts).toContain('LIVE PREVIEW');
-  expect(allTexts).toContain('⚡ Tap to Simulate Video Swipe (+1)');
+  expect(allTexts).toContain('Tap to Simulate Video Swipe (+1)');
 
   // Tap HUD swipe simulator button
   const simulateNode = renderer!.root
@@ -315,7 +321,7 @@ test('supports focus mode soundscapes and limit steppers', async () => {
   expect(blockTexts).toContain('DEEP WORK FOCUS SHIELD');
   expect(blockTexts).toContain('Procedural Soundscape');
 
-  // Tap "▶ Play Noise" soundscape button
+  // Tap Play Noise soundscape button
   const playNoiseNode = renderer!.root
     .findAllByType(Text)
     .find(
@@ -359,6 +365,115 @@ test('supports focus mode soundscapes and limit steppers', async () => {
   expect(plusBtn).toBeDefined();
   await ReactTestRenderer.act(() => plusBtn!.props.onPress());
   expect(PrototypeSettings.setDailyLimits).toHaveBeenCalledWith(55, 30);
+
+  await ReactTestRenderer.act(() => renderer!.unmount());
+});
+
+test('supports in-feed neuro-interventions, deeper Polly mascot integration, and widget', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+  });
+
+  // Skip intro onboarding to reach main dashboard
+  const skipTextNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'Skip →');
+  let skipButton = skipTextNode!.parent;
+  while (skipButton && !skipButton.props.onPress) {
+    skipButton = skipButton.parent;
+  }
+  await ReactTestRenderer.act(() => skipButton!.props.onPress());
+
+  // Enter dashboard
+  const enterBtnText = renderer!.root
+    .findAllByType(Text)
+    .find(
+      node =>
+        typeof node.props.children === 'string' &&
+        node.props.children.includes('Dashboard →'),
+    );
+  let enterBtn = enterBtnText!.parent;
+  while (enterBtn && !enterBtn.props.onPress) {
+    enterBtn = enterBtn.parent;
+  }
+  await ReactTestRenderer.act(() => enterBtn!.props.onPress());
+
+  // Verify Polly's Morning Alignment Card Launcher on Dashboard
+  const dashTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(dashTexts).toContain("POLLY'S MORNING ALIGNMENT");
+  expect(dashTexts).toContain('Yesterday you reclaimed');
+  expect(dashTexts).toContain('minutes beyond feeds');
+
+  // Verify Polly on the Floating HUD & Adaptive Expressions
+  expect(dashTexts).toContain('Polly on the Floating HUD');
+  expect(dashTexts).toContain('CALM (0-25)');
+  expect(dashTexts).toContain('14 Swipes (Calm)');
+  expect(dashTexts).toContain('38 Swipes (Attentive)');
+  expect(dashTexts).toContain('62 Swipes (Rest)');
+
+  // Tap "38 Swipes (Attentive)" state button
+  const attentiveBtnNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === '38 Swipes (Attentive)');
+  expect(attentiveBtnNode).toBeDefined();
+  let attentiveBtn = attentiveBtnNode!.parent;
+  while (attentiveBtn && !attentiveBtn.props.onPress) {
+    attentiveBtn = attentiveBtn.parent;
+  }
+  await ReactTestRenderer.act(() => attentiveBtn!.props.onPress());
+
+  // Verify badge updated to ATTENTIVE (25-50)
+  const updatedDashTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(updatedDashTexts).toContain('ATTENTIVE (25-50)');
+
+  // Verify Polly Home Screen Widget Showcase
+  expect(updatedDashTexts).toContain('Polly Home Screen Widget');
+  expect(updatedDashTexts).toContain('POLLY · MINDFUL REELS');
+  expect(updatedDashTexts).toContain('1-Tap 15m Focus Sprint');
+
+  // Switch to Focus / Block Tab to verify In-Feed Neuro-Interventions
+  const focusTab = renderer!.root.findByProps({ testID: 'dock-tab-block' });
+  expect(focusTab).toBeDefined();
+  await ReactTestRenderer.act(() => focusTab.props.onTouchEnd());
+
+  const blockTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+
+  // 1. In-Feed Neuro-Interventions card
+  expect(blockTexts).toContain('In-Feed Neuro-Interventions');
+  expect(blockTexts).toContain('REAL-TIME TRANCE BREAKERS');
+
+  // 2. Grayscale Feed Filter
+  expect(blockTexts).toContain('Grayscale Feed Filter');
+  expect(blockTexts).toContain('Both (Recommended)');
+
+  // 3. Rapid Fidget Swipe Detector
+  expect(blockTexts).toContain('Rapid Fidget Swipe Detector');
+  expect(blockTexts).toContain('SPEED-SWIPES INTERRUPTED TODAY');
+  expect(blockTexts).toContain('Simulate Fidget Swipes (Test Double-Buzz)');
+
+  // 4. "One Last Reel" Conscious Exit Contract
+  expect(blockTexts).toContain('"One Last Reel" Conscious Exit');
+  expect(blockTexts).toContain('Test 60s Conscious Exit Contract');
+
+  // 5. Post-Session Reality Check (3-Second Micro-Log)
+  expect(blockTexts).toContain('Post-Session Reality Check');
+  expect(blockTexts).toContain('Nourishing');
+  expect(blockTexts).toContain('Draining');
+  expect(blockTexts).toContain('Test Reality Check Prompt (Thumbs Up / Down)');
 
   await ReactTestRenderer.act(() => renderer!.unmount());
 });

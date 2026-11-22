@@ -14,19 +14,21 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
+import com.reelcount.widget.PollyWidgetProvider
 import java.util.ArrayDeque
 
 /**
  * Event-only tracking and enforcement Accessibility Service.
  *
  * Implements:
- * 1. Focus Mode Enforcement: Instantly exits and blocks target apps during active focus sessions.
- * 2. Bedtime Sleep Shield: Automatically blocks short-form feeds during night hours (11 PM - 6 AM).
- * 3. Real-time short video scroll tracking & live floating overlay HUD updates.
- * 4. Doomscroll Vortex Nudge: Warns users after 15 consecutive shorts to break compulsive loops.
- * 5. Daily limit monitoring, interactive push notifications, and warning alerts.
- * 6. Subtle haptic feedback on each detected short-video swipe.
- * 7. Persistent count tracking via ReelCountPreferences.
+ * 1. In-Feed Neuro-Interventions:
+ *    • Grayscale Feed Filter on Overuse (cuts dopamine loop without hard blocks)
+ *    • Rapid Fidget Swipe Detector (double buzz + 3-breath pause)
+ *    • "One Last Reel" Conscious Exit Contract (60-second graceful wind-down)
+ *    • Post-Session Reality Check (3-Second Micro-Log for 15+ min sessions)
+ * 2. Polly Mascot Floating HUD Overlay with 3 adaptive expression states.
+ * 3. Focus Mode & Bedtime Shield Enforcement.
+ * 4. Doomscroll Vortex Nudges & Ambient Notification Shade Status.
  */
 class ReelCountAccessibilityService : AccessibilityService() {
   private val trace = ArrayDeque<EventMetadata>(MAX_TRACE_EVENTS)
@@ -44,6 +46,35 @@ class ReelCountAccessibilityService : AccessibilityService() {
   private var lastDoomscrollAlertTime: Long = 0L
   private var consecutiveShortsInApp = 0
 
+  // Neuro-Intervention State
+  private val recentSwipeTimes = ArrayDeque<Long>()
+  private var lastFidgetAlertTime = 0L
+  private var sessionStartTime = 0L
+  private var isConsciousExitActive = false
+  private var consciousExitSecondsLeft = 60
+
+  private val consciousExitRunnable = object : Runnable {
+    override fun run() {
+      if (!isConsciousExitActive) return
+      consciousExitSecondsLeft--
+      if (consciousExitSecondsLeft > 0) {
+        overlayHud?.updateConsciousExit(consciousExitSecondsLeft)
+        handler.postDelayed(this, 1000L)
+      } else {
+        isConsciousExitActive = false
+        overlayHud?.endConsciousExit()
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        handler.post {
+          Toast.makeText(
+            applicationContext,
+            "Polly Conscious Exit: Mindful session complete. Phone placed down.",
+            Toast.LENGTH_LONG
+          ).show()
+        }
+      }
+    }
+  }
+
   private lateinit var prefs: ReelCountPreferences
   private var notificationManager: NotificationManager? = null
 
@@ -59,6 +90,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     if (overlayHud == null) {
       overlayHud = ReelCountOverlayHud(this)
     }
+    PollyWidgetProvider.updateAllWidgets(applicationContext)
   }
 
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -75,6 +107,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     // 1. BEDTIME SLEEP SHIELD ENFORCEMENT
     if (packageName in TargetPackages.all && prefs.isBedtimeShieldActive()) {
       overlayHud?.hide()
+      overlayHud?.setGrayscaleOverlay(false)
       currentActivePackage = null
       performGlobalAction(GLOBAL_ACTION_HOME)
 
@@ -83,7 +116,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
         handler.post {
           Toast.makeText(
             applicationContext,
-            "🌙 ReelCount Bedtime Shield Active\nSleep sanctuary mode: $appLabel is blocked until morning",
+            "Polly Bedtime Shield Active\nSleep sanctuary mode: $appLabel is blocked until morning",
             Toast.LENGTH_LONG
           ).show()
         }
@@ -96,9 +129,9 @@ class ReelCountAccessibilityService : AccessibilityService() {
     val canonicalPkg = TargetPackages.getCanonicalName(packageName)
     if (prefs.isPackageBlocked(canonicalPkg) || prefs.isPackageBlocked(packageName)) {
       overlayHud?.hide()
+      overlayHud?.setGrayscaleOverlay(false)
       currentActivePackage = null
 
-      // Kick user back to the home screen
       performGlobalAction(GLOBAL_ACTION_HOME)
 
       if (now - lastBlockedToastTime > 3_000L) {
@@ -107,7 +140,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
         handler.post {
           Toast.makeText(
             applicationContext,
-            "🔒 ReelCount Focus Mode Active\n$appLabel is blocked ($remainingMin min remaining)",
+            "Polly Focus Mode Active\n$appLabel is blocked ($remainingMin min remaining)",
             Toast.LENGTH_LONG
           ).show()
         }
@@ -116,11 +149,34 @@ class ReelCountAccessibilityService : AccessibilityService() {
       return
     }
 
-    // 3. TARGET APP MONITORING
+    // 3. TARGET APP MONITORING & POST-SESSION REALITY CHECK
     if (packageName !in TargetPackages.all) {
       if (currentActivePackage != null && packageName != applicationContext.packageName) {
+        val exitingPkg = currentActivePackage ?: ""
+        val exitingLabel = TargetPackages.getDisplayLabel(exitingPkg)
+        val elapsedMinutes = if (sessionStartTime > 0L) {
+          ((now - sessionStartTime) / 60_000L).toInt()
+        } else 0
+
+        // Post-Session Reality Check (3-Second Micro-Log) for 15+ minute sessions
+        if (prefs.isRealityCheckEnabled() && elapsedMinutes >= 15) {
+          overlayHud?.showRealityCheckCard(exitingLabel, elapsedMinutes) { rating ->
+            prefs.recordMicroLog(exitingLabel, elapsedMinutes, rating)
+            PollyWidgetProvider.updateAllWidgets(applicationContext)
+          }
+        }
+
+        overlayHud?.setGrayscaleOverlay(false)
+        if (isConsciousExitActive) {
+          isConsciousExitActive = false
+          handler.removeCallbacks(consciousExitRunnable)
+          overlayHud?.endConsciousExit()
+        }
+
         currentActivePackage = null
         consecutiveShortsInApp = 0
+        sessionStartTime = 0L
+        recentSwipeTimes.clear()
         overlayHud?.hide()
       }
       return
@@ -130,8 +186,13 @@ class ReelCountAccessibilityService : AccessibilityService() {
     currentActivePackage = packageName
     if (isAppSwitch) {
       consecutiveShortsInApp = 0
+      sessionStartTime = now
+      recentSwipeTimes.clear()
       reducer.reset()
     }
+
+    // Check & apply Grayscale Feed Filter
+    checkGrayscaleFeedFilter()
 
     // Notify when opening a short-video app
     if (isAppSwitch && (lastNotifiedPackage != packageName || now - lastNotificationTime > 15_000L)) {
@@ -144,7 +205,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
       handler.post {
         Toast.makeText(
           applicationContext,
-          "🎬 ReelCount: $appLabel opened · Counter active",
+          "Polly: $appLabel counter active",
           Toast.LENGTH_SHORT
         ).show()
       }
@@ -155,7 +216,8 @@ class ReelCountAccessibilityService : AccessibilityService() {
     val rootNode = if (
       event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED ||
       event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
-      event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+      event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+      event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
     ) {
       try {
         rootInActiveWindow
@@ -191,27 +253,68 @@ class ReelCountAccessibilityService : AccessibilityService() {
       val isPkgLimitHit = pkgLimit > 0 && currentPkgCount >= pkgLimit
       val isLimitHit = (todayTotal >= dailyLimit) || isPkgLimitHit
 
-      // Update HUD overlay
+      // Update HUD overlay & Widget
       overlayHud?.updateCount(appLabel, currentPkgCount, isLimitHit)
       updateAmbientStatusNotification()
+      PollyWidgetProvider.updateAllWidgets(applicationContext)
 
-      // Doomscroll Vortex Alert: 15+ consecutive shorts in a single session
-      if (prefs.isDoomscrollAlertEnabled() && consecutiveShortsInApp >= 15 && (consecutiveShortsInApp % 10 == 5)) {
+      // Re-check Grayscale filter after scroll
+      checkGrayscaleFeedFilter()
+
+      // Rapid "Fidget Swipe" Detector: 4+ swipes under 15 seconds
+      recentSwipeTimes.addLast(now)
+      while (recentSwipeTimes.isNotEmpty() && (now - recentSwipeTimes.first) > 15_000L) {
+        recentSwipeTimes.removeFirst()
+      }
+      if (prefs.isFidgetSwipeEnabled() && recentSwipeTimes.size >= 4 && (now - lastFidgetAlertTime > 20_000L)) {
+        lastFidgetAlertTime = now
+        prefs.incrementFidgetSwipeCount()
+        triggerFidgetDoubleBuzz()
+        overlayHud?.showFidgetAlert()
+        handler.post {
+          Toast.makeText(
+            applicationContext,
+            "Polly: Speed-swiping without watching. Take a 3-breath pause.",
+            Toast.LENGTH_LONG
+          ).show()
+        }
+      }
+
+      // "One Last Reel" Conscious Exit Contract
+      if (isLimitHit) {
+        if (prefs.isConsciousExitEnabled()) {
+          if (!isConsciousExitActive) {
+            isConsciousExitActive = true
+            consciousExitSecondsLeft = 60
+            overlayHud?.updateConsciousExit(consciousExitSecondsLeft)
+            handler.removeCallbacks(consciousExitRunnable)
+            handler.postDelayed(consciousExitRunnable, 1000L)
+            triggerWarningVibration()
+            handler.post {
+              Toast.makeText(
+                applicationContext,
+                "One Last Reel Contract: Finish this video mindfully, then place your phone face down.",
+                Toast.LENGTH_LONG
+              ).show()
+            }
+          }
+        } else {
+          // Standard limit notifications if conscious exit is disabled
+          if (todayTotal == dailyLimit || (isPkgLimitHit && currentPkgCount == pkgLimit) || (now - lastLimitAlertTime > 180_000L)) {
+            lastLimitAlertTime = now
+            val notifTitle = if (isPkgLimitHit) appLabel else "Daily"
+            val notifLimit = if (isPkgLimitHit) pkgLimit else dailyLimit
+            val notifCount = if (isPkgLimitHit) currentPkgCount else todayTotal
+            sendLimitReachedNotification(notifCount, notifLimit, notifTitle)
+            triggerWarningVibration()
+          } else {
+            triggerTickVibration()
+          }
+        }
+      } else if (prefs.isDoomscrollAlertEnabled() && consecutiveShortsInApp >= 15 && (consecutiveShortsInApp % 10 == 5)) {
         if (now - lastDoomscrollAlertTime > 120_000L) {
           lastDoomscrollAlertTime = now
           sendDoomscrollNotification(consecutiveShortsInApp, appLabel)
-          triggerWarningVibration()
-        } else {
-          triggerTickVibration()
-        }
-      } else if (isLimitHit) {
-        // Daily or Per-App Limit Crossed
-        if (todayTotal == dailyLimit || (isPkgLimitHit && currentPkgCount == pkgLimit) || (now - lastLimitAlertTime > 180_000L)) {
-          lastLimitAlertTime = now
-          val notifTitle = if (isPkgLimitHit) appLabel else "Daily"
-          val notifLimit = if (isPkgLimitHit) pkgLimit else dailyLimit
-          val notifCount = if (isPkgLimitHit) currentPkgCount else todayTotal
-          sendLimitReachedNotification(notifCount, notifLimit, notifTitle)
           triggerWarningVibration()
         } else {
           triggerTickVibration()
@@ -223,6 +326,24 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
     handler.removeCallbacks(clearIdleState)
     handler.postDelayed(clearIdleState, TRACE_IDLE_TIMEOUT_MS)
+  }
+
+  private fun checkGrayscaleFeedFilter() {
+    if (!prefs.isGrayscaleFilterEnabled()) {
+      overlayHud?.setGrayscaleOverlay(false)
+      return
+    }
+    val todayTotal = prefs.getTodayCount()
+    val dailyLimit = prefs.getDailyShortLimit()
+    val isOveruse = dailyLimit > 0 && todayTotal >= (dailyLimit * 0.8)
+    val isBedtime = prefs.isBedtimeShieldActive()
+    val mode = prefs.getGrayscaleTriggerMode()
+    val shouldFilter = when (mode) {
+      "overuse" -> isOveruse
+      "bedtime" -> isBedtime
+      else -> isOveruse || isBedtime
+    }
+    overlayHud?.setGrayscaleOverlay(shouldFilter)
   }
 
   private fun createNotificationChannels() {
@@ -266,7 +387,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val builder = android.app.Notification.Builder(this, CHANNEL_STATUS_ID)
-          .setContentTitle("🎬 ReelCount: $total / $limit Shorts ($percent%)")
+          .setContentTitle("Polly: $total / $limit Shorts ($percent%)")
           .setContentText("Tap to open Dashboard · Stay mindful")
           .setSmallIcon(android.R.drawable.ic_menu_compass)
           .setOngoing(true)
@@ -278,13 +399,13 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
           val icon = android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_lock_idle_lock)
-          val action = android.app.Notification.Action.Builder(icon, "⚡ Focus 15m", focusPendingIntent).build()
+          val action = android.app.Notification.Action.Builder(icon, "Focus 15m", focusPendingIntent).build()
           builder.addAction(action)
         } else {
           @Suppress("DEPRECATION")
           builder.addAction(
             android.R.drawable.ic_lock_idle_lock,
-            "⚡ Focus 15m",
+            "Focus 15m",
             focusPendingIntent
           )
         }
@@ -310,7 +431,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     val pendingIntent = getLaunchPendingIntent()
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val title = if (label == "Daily") "⚠️ ReelCount: Daily Limit Reached" else "⚠️ ReelCount: $label Limit Reached"
+        val title = if (label == "Daily") "Polly: Daily Limit Reached" else "Polly: $label Limit Reached"
         val builder = android.app.Notification.Builder(this, CHANNEL_ID)
           .setContentTitle(title)
           .setContentText("You've watched $total shorts (Limit: $limit). Tap to take a mindful break.")
@@ -332,7 +453,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val builder = android.app.Notification.Builder(this, CHANNEL_ID)
-          .setContentTitle("🌪️ Doomscroll Loop Warning")
+          .setContentTitle("Doomscroll Loop Warning")
           .setContentText("$consecutive shorts watched in a row on $appName. Take a 4-4-4 breathing reset!")
           .setSmallIcon(android.R.drawable.ic_popup_reminder)
           .setAutoCancel(true)
@@ -354,6 +475,22 @@ class ReelCountAccessibilityService : AccessibilityService() {
       } else {
         @Suppress("DEPRECATION")
         vibrator.vibrate(18)
+      }
+    } catch (_: Exception) {}
+  }
+
+  /**
+   * Distinct double-buzz haptic pattern for the Rapid Fidget Swipe Detector.
+   */
+  private fun triggerFidgetDoubleBuzz() {
+    try {
+      val vibrator = getVibrator() ?: return
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val pattern = longArrayOf(0, 100, 60, 140)
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
+      } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(longArrayOf(0, 100, 60, 140), -1)
       }
     } catch (_: Exception) {}
   }
@@ -383,11 +520,14 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
   override fun onInterrupt() {
     handler.removeCallbacks(clearIdleState)
+    handler.removeCallbacks(consciousExitRunnable)
     trace.clear()
     reducer.reset()
     consecutiveShortsInApp = 0
+    isConsciousExitActive = false
     PrototypeRuntimeStatus.interrupted()
     overlayHud?.hide()
+    overlayHud?.setGrayscaleOverlay(false)
   }
 
   override fun onUnbind(intent: Intent?): Boolean {
@@ -404,11 +544,14 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
   private fun clearTransientState() {
     handler.removeCallbacks(clearIdleState)
+    handler.removeCallbacks(consciousExitRunnable)
     trace.clear()
     reducer.reset()
     consecutiveShortsInApp = 0
+    isConsciousExitActive = false
     PrototypeRuntimeStatus.disconnected()
     overlayHud?.hide()
+    overlayHud?.setGrayscaleOverlay(false)
     currentActivePackage = null
     try {
       notificationManager?.cancel(NOTIFICATION_STATUS_ID)
@@ -418,12 +561,13 @@ class ReelCountAccessibilityService : AccessibilityService() {
   private fun clearIdleTrace() {
     trace.clear()
     consecutiveShortsInApp = 0
+    recentSwipeTimes.clear()
     PrototypeRuntimeStatus.clearTrace()
   }
 
   private companion object {
     const val MAX_TRACE_EVENTS = 32
-    const val TRACE_IDLE_TIMEOUT_MS = 2_000L
+    const val TRACE_IDLE_TIMEOUT_MS = 30_000L
     const val CHANNEL_ID = "reelcount_alerts"
     const val CHANNEL_STATUS_ID = "reelcount_status"
     const val NOTIFICATION_LIMIT_ID = 1001

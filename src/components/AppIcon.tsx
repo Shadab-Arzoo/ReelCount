@@ -28,7 +28,31 @@ export type IconName =
   | 'rain'
   | 'info'
   | 'phone'
-  | 'bell';
+  | 'bell'
+  | 'sun'
+  | 'brain'
+  | 'compass'
+  | 'eye'
+  | 'hand'
+  | 'ear'
+  | 'heart'
+  | 'refresh'
+  | 'users'
+  | 'book'
+  | 'walk'
+  | 'tree'
+  | 'play'
+  | 'pause'
+  | 'alert'
+  | 'calendar'
+  | 'camera'
+  | 'music'
+  | 'ghost'
+  | 'crown'
+  | 'dot'
+  | 'thumb-up'
+  | 'thumb-down'
+  | 'filter';
 
 interface AppIconProps {
   name: IconName;
@@ -637,6 +661,597 @@ const AppIconComponent: React.FC<AppIconProps> = ({
           />
           <View style={{ width: s * 0.78, height: s * 0.08, backgroundColor: color, borderRadius: 2 }} />
           <View style={{ width: s * 0.16, height: s * 0.1, borderRadius: s * 0.08, backgroundColor: color, marginTop: 1 }} />
+        </View>
+      );
+
+    case 'sun':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.44,
+              height: s * 0.44,
+              borderRadius: (s * 0.44) / 2,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+          {/* Rays */}
+          <View style={{ position: 'absolute', top: s * 0.06, width: s * 0.08, height: s * 0.12, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ position: 'absolute', bottom: s * 0.06, width: s * 0.08, height: s * 0.12, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ position: 'absolute', left: s * 0.06, width: s * 0.12, height: s * 0.08, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ position: 'absolute', right: s * 0.06, width: s * 0.12, height: s * 0.08, backgroundColor: color, borderRadius: 2 }} />
+        </View>
+      );
+
+    case 'brain':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: s * 0.06 }, style]}>
+          <View
+            style={{
+              width: s * 0.36,
+              height: s * 0.64,
+              borderTopLeftRadius: s * 0.18,
+              borderBottomLeftRadius: s * 0.18,
+              borderTopRightRadius: s * 0.08,
+              borderBottomRightRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+          <View
+            style={{
+              width: s * 0.36,
+              height: s * 0.64,
+              borderTopRightRadius: s * 0.18,
+              borderBottomRightRadius: s * 0.18,
+              borderTopLeftRadius: s * 0.08,
+              borderBottomLeftRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+        </View>
+      );
+
+    case 'compass':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.85,
+              height: s * 0.85,
+              borderRadius: (s * 0.85) / 2,
+              borderWidth: s * 0.09,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.12,
+                height: s * 0.44,
+                backgroundColor: color,
+                borderRadius: 2,
+                transform: [{ rotate: '45deg' }],
+              }}
+            />
+          </View>
+        </View>
+      );
+
+    case 'eye':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.86,
+              height: s * 0.52,
+              borderRadius: s * 0.26,
+              borderWidth: s * 0.09,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.22,
+                height: s * 0.22,
+                borderRadius: (s * 0.22) / 2,
+                backgroundColor: color,
+              }}
+            />
+          </View>
+        </View>
+      );
+
+    case 'hand':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.52,
+              height: s * 0.62,
+              borderTopLeftRadius: s * 0.16,
+              borderTopRightRadius: s * 0.16,
+              borderBottomLeftRadius: s * 0.12,
+              borderBottomRightRadius: s * 0.12,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              left: s * 0.14,
+              top: s * 0.36,
+              width: s * 0.14,
+              height: s * 0.26,
+              borderRadius: s * 0.07,
+              backgroundColor: color,
+            }}
+          />
+        </View>
+      );
+
+    case 'ear':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.54,
+              height: s * 0.76,
+              borderTopLeftRadius: s * 0.27,
+              borderBottomLeftRadius: s * 0.27,
+              borderTopRightRadius: s * 0.1,
+              borderBottomRightRadius: s * 0.27,
+              borderWidth: s * 0.09,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.14,
+                height: s * 0.22,
+                borderRadius: s * 0.07,
+                borderWidth: s * 0.07,
+                borderColor: color,
+              }}
+            />
+          </View>
+        </View>
+      );
+
+    case 'heart':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.44,
+              height: s * 0.44,
+              backgroundColor: color,
+              transform: [{ rotate: '-45deg' }],
+              borderTopLeftRadius: s * 0.22,
+              borderTopRightRadius: s * 0.22,
+            }}
+          />
+        </View>
+      );
+
+    case 'refresh':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.74,
+              height: s * 0.74,
+              borderRadius: (s * 0.74) / 2,
+              borderWidth: s * 0.09,
+              borderColor: color,
+              borderRightColor: 'transparent',
+              transform: [{ rotate: '45deg' }],
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              top: s * 0.12,
+              right: s * 0.18,
+              width: s * 0.22,
+              height: s * 0.22,
+              borderTopWidth: s * 0.09,
+              borderRightWidth: s * 0.09,
+              borderColor: color,
+            }}
+          />
+        </View>
+      );
+
+    case 'users':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          {/* Back user */}
+          <View
+            style={{
+              position: 'absolute',
+              right: s * 0.14,
+              top: s * 0.15,
+              width: s * 0.28,
+              height: s * 0.28,
+              borderRadius: (s * 0.28) / 2,
+              borderWidth: s * 0.07,
+              borderColor: color,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              right: s * 0.08,
+              bottom: s * 0.2,
+              width: s * 0.44,
+              height: s * 0.24,
+              borderTopLeftRadius: s * 0.12,
+              borderTopRightRadius: s * 0.12,
+              borderWidth: s * 0.07,
+              borderColor: color,
+            }}
+          />
+          {/* Front user */}
+          <View
+            style={{
+              position: 'absolute',
+              left: s * 0.16,
+              top: s * 0.24,
+              width: s * 0.32,
+              height: s * 0.32,
+              borderRadius: (s * 0.32) / 2,
+              backgroundColor: color,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              left: s * 0.08,
+              bottom: s * 0.1,
+              width: s * 0.48,
+              height: s * 0.28,
+              borderTopLeftRadius: s * 0.14,
+              borderTopRightRadius: s * 0.14,
+              backgroundColor: color,
+            }}
+          />
+        </View>
+      );
+
+    case 'book':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: s * 0.04 }, style]}>
+          <View
+            style={{
+              width: s * 0.38,
+              height: s * 0.54,
+              borderTopLeftRadius: s * 0.08,
+              borderBottomLeftRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+          <View
+            style={{
+              width: s * 0.38,
+              height: s * 0.54,
+              borderTopRightRadius: s * 0.08,
+              borderBottomRightRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+            }}
+          />
+        </View>
+      );
+
+    case 'walk':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          {/* Head */}
+          <View style={{ width: s * 0.2, height: s * 0.2, borderRadius: s * 0.1, backgroundColor: color, marginBottom: s * 0.04 }} />
+          {/* Torso & angled legs */}
+          <View style={{ width: s * 0.1, height: s * 0.3, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ flexDirection: 'row', gap: s * 0.12, marginTop: -s * 0.04 }}>
+            <View style={{ width: s * 0.09, height: s * 0.25, backgroundColor: color, transform: [{ rotate: '20deg' }], borderRadius: 2 }} />
+            <View style={{ width: s * 0.09, height: s * 0.25, backgroundColor: color, transform: [{ rotate: '-20deg' }], borderRadius: 2 }} />
+          </View>
+        </View>
+      );
+
+    case 'tree':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: 0,
+              height: 0,
+              borderLeftWidth: s * 0.3,
+              borderRightWidth: s * 0.3,
+              borderBottomWidth: s * 0.45,
+              borderLeftColor: 'transparent',
+              borderRightColor: 'transparent',
+              borderBottomColor: color,
+            }}
+          />
+          <View style={{ width: s * 0.12, height: s * 0.2, backgroundColor: color, marginTop: 1 }} />
+        </View>
+      );
+
+    case 'play':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: 0,
+              height: 0,
+              borderLeftWidth: s * 0.48,
+              borderLeftColor: color,
+              borderTopWidth: s * 0.28,
+              borderTopColor: 'transparent',
+              borderBottomWidth: s * 0.28,
+              borderBottomColor: 'transparent',
+              marginLeft: s * 0.1,
+            }}
+          />
+        </View>
+      );
+
+    case 'pause':
+      return (
+        <View style={[{ width: s, height: s, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: s * 0.16 }, style]}>
+          <View style={{ width: s * 0.16, height: s * 0.56, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ width: s * 0.16, height: s * 0.56, backgroundColor: color, borderRadius: 2 }} />
+        </View>
+      );
+
+    case 'alert':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: 0,
+              height: 0,
+              borderLeftWidth: s * 0.42,
+              borderRightWidth: s * 0.42,
+              borderBottomWidth: s * 0.72,
+              borderLeftColor: 'transparent',
+              borderRightColor: 'transparent',
+              borderBottomColor: color,
+            }}
+          />
+          <View style={{ position: 'absolute', top: s * 0.38, width: s * 0.08, height: s * 0.22, backgroundColor: '#09130e', borderRadius: 1 }} />
+          <View style={{ position: 'absolute', top: s * 0.66, width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: '#09130e' }} />
+        </View>
+      );
+
+    case 'calendar':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.74,
+              height: s * 0.7,
+              borderRadius: s * 0.1,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              paddingTop: s * 0.14,
+            }}
+          >
+            <View style={{ width: '100%', height: s * 0.06, backgroundColor: color }} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingTop: s * 0.08 }}>
+              <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color }} />
+              <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color }} />
+              <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color }} />
+            </View>
+          </View>
+          {/* Top binder rings */}
+          <View style={{ position: 'absolute', top: s * 0.08, left: s * 0.26, width: s * 0.08, height: s * 0.12, backgroundColor: color, borderRadius: 2 }} />
+          <View style={{ position: 'absolute', top: s * 0.08, right: s * 0.26, width: s * 0.08, height: s * 0.12, backgroundColor: color, borderRadius: 2 }} />
+        </View>
+      );
+
+    case 'camera':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View style={{ width: s * 0.24, height: s * 0.08, backgroundColor: color, borderTopLeftRadius: 2, borderTopRightRadius: 2, marginBottom: -1 }} />
+          <View
+            style={{
+              width: s * 0.8,
+              height: s * 0.6,
+              borderRadius: s * 0.12,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: s * 0.28,
+                height: s * 0.28,
+                borderRadius: (s * 0.28) / 2,
+                borderWidth: s * 0.07,
+                borderColor: color,
+              }}
+            />
+          </View>
+        </View>
+      );
+
+    case 'music':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View style={{ width: s * 0.62, height: s * 0.14, backgroundColor: color, borderRadius: 2, marginBottom: -s * 0.02 }} />
+          <View style={{ width: s * 0.62, flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ width: s * 0.09, height: s * 0.44, backgroundColor: color }} />
+            <View style={{ width: s * 0.09, height: s * 0.44, backgroundColor: color }} />
+          </View>
+          <View style={{ width: s * 0.72, flexDirection: 'row', justifyContent: 'space-between', marginTop: -s * 0.08 }}>
+            <View style={{ width: s * 0.2, height: s * 0.16, borderRadius: s * 0.08, backgroundColor: color }} />
+            <View style={{ width: s * 0.2, height: s * 0.16, borderRadius: s * 0.08, backgroundColor: color }} />
+          </View>
+        </View>
+      );
+
+    case 'ghost':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.7,
+              height: s * 0.72,
+              borderTopLeftRadius: s * 0.35,
+              borderTopRightRadius: s * 0.35,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              alignItems: 'center',
+              paddingTop: s * 0.16,
+            }}
+          >
+            <View style={{ flexDirection: 'row', gap: s * 0.14 }}>
+              <View style={{ width: s * 0.09, height: s * 0.09, borderRadius: s * 0.045, backgroundColor: color }} />
+              <View style={{ width: s * 0.09, height: s * 0.09, borderRadius: s * 0.045, backgroundColor: color }} />
+            </View>
+          </View>
+        </View>
+      );
+
+    case 'crown':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.74,
+              height: s * 0.42,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              borderTopWidth: 0,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexDirection: 'row',
+              paddingHorizontal: 2,
+            }}
+          >
+            <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color, marginTop: -s * 0.1 }} />
+            <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color, marginTop: -s * 0.18 }} />
+            <View style={{ width: s * 0.08, height: s * 0.08, borderRadius: s * 0.04, backgroundColor: color, marginTop: -s * 0.1 }} />
+          </View>
+          <View style={{ width: s * 0.74, height: s * 0.08, backgroundColor: color, borderRadius: 1 }} />
+        </View>
+      );
+
+    case 'thumb-up':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.44,
+              height: s * 0.44,
+              borderRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              marginTop: s * 0.16,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              top: s * 0.1,
+              left: s * 0.28,
+              width: s * 0.22,
+              height: s * 0.36,
+              borderTopLeftRadius: s * 0.1,
+              borderTopRightRadius: s * 0.1,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              borderBottomWidth: 0,
+            }}
+          />
+        </View>
+      );
+
+    case 'thumb-down':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.44,
+              height: s * 0.44,
+              borderRadius: s * 0.08,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              marginBottom: s * 0.16,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              bottom: s * 0.1,
+              left: s * 0.28,
+              width: s * 0.22,
+              height: s * 0.36,
+              borderBottomLeftRadius: s * 0.1,
+              borderBottomRightRadius: s * 0.1,
+              borderWidth: s * 0.08,
+              borderColor: color,
+              borderTopWidth: 0,
+            }}
+          />
+        </View>
+      );
+
+    case 'filter':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.65,
+              height: s * 0.1,
+              backgroundColor: color,
+              borderRadius: 1,
+              marginBottom: s * 0.08,
+            }}
+          />
+          <View
+            style={{
+              width: s * 0.44,
+              height: s * 0.1,
+              backgroundColor: color,
+              borderRadius: 1,
+              marginBottom: s * 0.08,
+            }}
+          />
+          <View
+            style={{
+              width: s * 0.22,
+              height: s * 0.1,
+              backgroundColor: color,
+              borderRadius: 1,
+            }}
+          />
+        </View>
+      );
+
+    case 'dot':
+      return (
+        <View style={[{ width: s, height: s, alignItems: 'center', justifyContent: 'center' }, style]}>
+          <View
+            style={{
+              width: s * 0.48,
+              height: s * 0.48,
+              borderRadius: (s * 0.48) / 2,
+              backgroundColor: color,
+            }}
+          />
         </View>
       );
 

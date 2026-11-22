@@ -32,12 +32,27 @@ export type PrototypeStatus = {
   youtubeLimit?: number;
   snapchatLimit?: number;
   themeAccent?: string;
+  grayscaleFilterEnabled?: boolean;
+  grayscaleTriggerMode?: string;
+  fidgetSwipeDetectorEnabled?: boolean;
+  fidgetSwipeCountToday?: number;
+  consciousExitEnabled?: boolean;
+  realityCheckEnabled?: boolean;
+  nourishingCount?: number;
+  drainingCount?: number;
 };
 
 export type DayHistoryItem = {
   date: string;
   label: string;
   count: number;
+};
+
+export type MicroLogItem = {
+  timestamp: number;
+  appName: string;
+  durationMinutes: number;
+  rating: 'nourishing' | 'draining';
 };
 
 type PrototypeSettingsModule = {
@@ -73,6 +88,12 @@ type PrototypeSettingsModule = {
   setUserIntention(intention: string): Promise<boolean>;
   setUserMood(mood: string): Promise<boolean>;
   setThemeAccent(theme: string): Promise<boolean>;
+  setGrayscaleFilter(enabled: boolean, mode: string): Promise<boolean>;
+  setFidgetSwipeDetector(enabled: boolean): Promise<boolean>;
+  setConsciousExitEnabled(enabled: boolean): Promise<boolean>;
+  setRealityCheckEnabled(enabled: boolean): Promise<boolean>;
+  recordMicroLog(appName: string, durationMinutes: number, rating: string): Promise<boolean>;
+  getMicroLogsJson(): Promise<string>;
 };
 
 const { PrototypeSettings } = NativeModules as {
@@ -244,5 +265,41 @@ export default {
       return Promise.resolve(false);
     }
     return PrototypeSettings.setThemeAccent(theme);
+  },
+  setGrayscaleFilter(enabled: boolean, mode: string = 'both'): Promise<boolean> {
+    if (!PrototypeSettings?.setGrayscaleFilter) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.setGrayscaleFilter(enabled, mode);
+  },
+  setFidgetSwipeDetector(enabled: boolean): Promise<boolean> {
+    if (!PrototypeSettings?.setFidgetSwipeDetector) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.setFidgetSwipeDetector(enabled);
+  },
+  setConsciousExitEnabled(enabled: boolean): Promise<boolean> {
+    if (!PrototypeSettings?.setConsciousExitEnabled) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.setConsciousExitEnabled(enabled);
+  },
+  setRealityCheckEnabled(enabled: boolean): Promise<boolean> {
+    if (!PrototypeSettings?.setRealityCheckEnabled) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.setRealityCheckEnabled(enabled);
+  },
+  recordMicroLog(appName: string, durationMinutes: number, rating: 'nourishing' | 'draining'): Promise<boolean> {
+    if (!PrototypeSettings?.recordMicroLog) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.recordMicroLog(appName, durationMinutes, rating);
+  },
+  getMicroLogsJson(): Promise<string> {
+    if (!PrototypeSettings?.getMicroLogsJson) {
+      return Promise.resolve('[]');
+    }
+    return PrototypeSettings.getMicroLogsJson();
   },
 };

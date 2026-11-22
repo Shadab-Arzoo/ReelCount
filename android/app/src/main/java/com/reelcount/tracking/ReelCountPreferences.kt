@@ -300,6 +300,88 @@ class ReelCountPreferences private constructor(context: Context) {
     return prefs.getString(KEY_THEME_ACCENT, "mint") ?: "mint"
   }
 
+  // --- In-Feed Neuro-Interventions Preferences ---
+
+  // 1. Grayscale Feed Filter
+  fun setGrayscaleFilterEnabled(enabled: Boolean, mode: String = "both") {
+    prefs.edit()
+      .putBoolean(KEY_GRAYSCALE_FILTER_ENABLED, enabled)
+      .putString(KEY_GRAYSCALE_TRIGGER_MODE, mode)
+      .apply()
+  }
+
+  fun isGrayscaleFilterEnabled(): Boolean = prefs.getBoolean(KEY_GRAYSCALE_FILTER_ENABLED, false)
+
+  fun getGrayscaleTriggerMode(): String = prefs.getString(KEY_GRAYSCALE_TRIGGER_MODE, "both") ?: "both"
+
+  // 2. Rapid Fidget Swipe Detector
+  fun setFidgetSwipeEnabled(enabled: Boolean) {
+    prefs.edit().putBoolean(KEY_FIDGET_SWIPE_ENABLED, enabled).apply()
+  }
+
+  fun isFidgetSwipeEnabled(): Boolean = prefs.getBoolean(KEY_FIDGET_SWIPE_ENABLED, true)
+
+  @Synchronized
+  fun incrementFidgetSwipeCount(): Int {
+    val today = getTodayKey()
+    val key = "fidget_swipes_$today"
+    val count = prefs.getInt(key, 0) + 1
+    prefs.edit().putInt(key, count).apply()
+    return count
+  }
+
+  fun getFidgetSwipeCountToday(): Int {
+    val today = getTodayKey()
+    return prefs.getInt("fidget_swipes_$today", 0)
+  }
+
+  // 3. Conscious Exit Contract ("One Last Reel")
+  fun setConsciousExitEnabled(enabled: Boolean) {
+    prefs.edit().putBoolean(KEY_CONSCIOUS_EXIT_ENABLED, enabled).apply()
+  }
+
+  fun isConsciousExitEnabled(): Boolean = prefs.getBoolean(KEY_CONSCIOUS_EXIT_ENABLED, true)
+
+  // 4. Post-Session Reality Check (3-Second Micro-Log)
+  fun setRealityCheckEnabled(enabled: Boolean) {
+    prefs.edit().putBoolean(KEY_REALITY_CHECK_ENABLED, enabled).apply()
+  }
+
+  fun isRealityCheckEnabled(): Boolean = prefs.getBoolean(KEY_REALITY_CHECK_ENABLED, true)
+
+  @Synchronized
+  fun recordMicroLog(appName: String, durationMinutes: Int, rating: String) {
+    val currentJson = prefs.getString(KEY_MICRO_LOGS_JSON, "[]") ?: "[]"
+    val timestamp = System.currentTimeMillis()
+    val cleanRating = if (rating.lowercase().contains("nourish")) "nourishing" else "draining"
+    val newEntry = "{\"timestamp\":$timestamp,\"appName\":\"$appName\",\"durationMinutes\":$durationMinutes,\"rating\":\"$cleanRating\"}"
+    val updatedJson = if (currentJson.trim() == "[]") {
+      "[$newEntry]"
+    } else {
+      currentJson.substring(0, currentJson.lastIndexOf(']')) + ",$newEntry]"
+    }
+    val countKey = if (cleanRating == "nourishing") KEY_NOURISHING_COUNT else KEY_DRAINING_COUNT
+    val currentRatingCount = prefs.getInt(countKey, 0) + 1
+
+    prefs.edit()
+      .putString(KEY_MICRO_LOGS_JSON, updatedJson)
+      .putInt(countKey, currentRatingCount)
+      .apply()
+  }
+
+  fun getMicroLogsJson(): String = prefs.getString(KEY_MICRO_LOGS_JSON, "[]") ?: "[]"
+
+  fun getNourishingCount(): Int = prefs.getInt(KEY_NOURISHING_COUNT, 8)
+
+  fun getDrainingCount(): Int = prefs.getInt(KEY_DRAINING_COUNT, 4)
+
+  // 5. Polly's Morning Alignment Card
+  fun setLastMorningAlignmentDate(date: String) {
+    prefs.edit().putString(KEY_LAST_MORNING_ALIGNMENT_DATE, date).apply()
+  }
+
+  fun getLastMorningAlignmentDate(): String? = prefs.getString(KEY_LAST_MORNING_ALIGNMENT_DATE, null)
+
   data class DayCount(val date: String, val label: String, val count: Int)
 
   companion object {
@@ -322,6 +404,15 @@ class ReelCountPreferences private constructor(context: Context) {
     private const val KEY_ZEN_XP = "zen_xp"
     private const val KEY_USER_INTENTION = "user_intention"
     private const val KEY_THEME_ACCENT = "theme_accent"
+    private const val KEY_GRAYSCALE_FILTER_ENABLED = "grayscale_filter_enabled"
+    private const val KEY_GRAYSCALE_TRIGGER_MODE = "grayscale_trigger_mode"
+    private const val KEY_FIDGET_SWIPE_ENABLED = "fidget_swipe_enabled"
+    private const val KEY_CONSCIOUS_EXIT_ENABLED = "conscious_exit_enabled"
+    private const val KEY_REALITY_CHECK_ENABLED = "reality_check_enabled"
+    private const val KEY_MICRO_LOGS_JSON = "micro_logs_json"
+    private const val KEY_NOURISHING_COUNT = "micro_log_nourishing_count"
+    private const val KEY_DRAINING_COUNT = "micro_log_draining_count"
+    private const val KEY_LAST_MORNING_ALIGNMENT_DATE = "last_morning_alignment_date"
 
     @Volatile
     private var INSTANCE: ReelCountPreferences? = null

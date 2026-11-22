@@ -160,8 +160,7 @@ internal class ShortVideoDetector {
         eventMatchesYouTubeShorts(event) || (rootNode != null && hasYouTubeShortsIndicators(rootNode))
       }
       TargetPackages.TIKTOK -> {
-        // TikTok is primarily short-form video in its main flow
-        true
+        eventMatchesTikTokFeed(event) || (rootNode != null && hasTikTokFeedIndicators(rootNode))
       }
       TargetPackages.SNAPCHAT -> {
         eventMatchesSnapchatSpotlight(event) || (rootNode != null && hasSnapchatSpotlightIndicators(rootNode))
@@ -253,9 +252,96 @@ internal class ShortVideoDetector {
     return check(root, 0)
   }
 
+  private fun eventMatchesTikTokFeed(event: AccessibilityEvent): Boolean {
+    val res = event.source?.viewIdResourceName?.lowercase() ?: ""
+    if (
+      res.contains("video_pager") ||
+      res.contains("view_pager") ||
+      res.contains("swipe_container") ||
+      res.contains("video_player") ||
+      res.contains("feed_video") ||
+      res.contains("aweme_pager") ||
+      res.contains("vertical_viewpager") ||
+      res.contains("video_feed")
+    ) return true
+
+    val desc = event.contentDescription?.toString()?.lowercase() ?: ""
+    if (
+      desc.contains("double tap to") ||
+      desc.contains("like video") ||
+      desc.contains("follow") ||
+      desc.contains("share video") ||
+      desc.contains("original sound")
+    ) return true
+
+    // TikTok scroll events in the main feed are typically TYPE_VIEW_SCROLLED
+    // with the main vertical pager as source
+    val className = event.source?.className?.toString() ?: ""
+    if (className.contains("ViewPager", ignoreCase = true) ||
+        className.contains("RecyclerView", ignoreCase = true)) {
+      // Only if the event looks like a vertical feed swipe
+      if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) return true
+    }
+
+    return false
+  }
+
+  private fun hasTikTokFeedIndicators(root: AccessibilityNodeInfo): Boolean {
+    var count = 0
+    fun check(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+      if (node == null || depth > MAX_SEARCH_DEPTH || count++ > MAX_SEARCH_NODES) return false
+      val id = node.viewIdResourceName?.lowercase() ?: ""
+      // Skip navigation/non-feed areas
+      if (id.contains("bottom_tab") || id.contains("bottom_navigation") || id.contains("tab_bar")) return false
+
+      if (
+        id.contains("video_pager") ||
+        id.contains("view_pager") ||
+        id.contains("swipe_container") ||
+        id.contains("aweme_pager") ||
+        id.contains("vertical_viewpager") ||
+        id.contains("video_feed") ||
+        id.contains("video_player")
+      ) {
+        return true
+      }
+      val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+      if (
+        desc.contains("double tap to") ||
+        desc.contains("like video") ||
+        desc.contains("original sound") ||
+        desc.contains("share video")
+      ) {
+        return true
+      }
+      for (i in 0 until node.childCount) {
+        val child = node.getChild(i) ?: continue
+        if (check(child, depth + 1)) return true
+      }
+      return false
+    }
+    return check(root, 0)
+  }
+
   private fun eventMatchesSnapchatSpotlight(event: AccessibilityEvent): Boolean {
     val res = event.source?.viewIdResourceName?.lowercase() ?: ""
-    return res.contains("spotlight_player") || res.contains("spotlight_feed")
+    if (
+      res.contains("spotlight_player") ||
+      res.contains("spotlight_feed") ||
+      res.contains("spotlight_pager") ||
+      res.contains("video_player") ||
+      res.contains("feed_pager") ||
+      res.contains("vertical_pager")
+    ) return true
+
+    val desc = event.contentDescription?.toString()?.lowercase() ?: ""
+    if (
+      desc.contains("spotlight") ||
+      desc.contains("video by") ||
+      desc.contains("trending sound")
+    ) return true
+
+    return false
   }
 
   private fun hasSnapchatSpotlightIndicators(root: AccessibilityNodeInfo): Boolean {
@@ -263,8 +349,20 @@ internal class ShortVideoDetector {
     fun check(node: AccessibilityNodeInfo?, depth: Int): Boolean {
       if (node == null || depth > MAX_SEARCH_DEPTH || count++ > MAX_SEARCH_NODES) return false
       val id = node.viewIdResourceName?.lowercase() ?: ""
-      if (id.contains("tab") || id.contains("navigation")) return false
-      if (id.contains("spotlight_player") || id.contains("spotlight_feed") || id.contains("spotlight_carousel")) {
+      if (id.contains("tab") || id.contains("navigation") || id.contains("bottom_bar")) return false
+      if (
+        id.contains("spotlight_player") ||
+        id.contains("spotlight_feed") ||
+        id.contains("spotlight_carousel") ||
+        id.contains("spotlight_pager") ||
+        id.contains("video_player") ||
+        id.contains("vertical_pager") ||
+        id.contains("feed_pager")
+      ) {
+        return true
+      }
+      val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+      if (desc.contains("spotlight") || desc.contains("video by")) {
         return true
       }
       for (i in 0 until node.childCount) {
@@ -285,7 +383,16 @@ internal class ShortVideoDetector {
     val directDesc = event.contentDescription?.toString()?.trim()
     if (!directDesc.isNullOrEmpty() && directDesc.length in 4..140) {
       val lower = directDesc.lowercase()
-      if (lower.contains("reel by") || lower.contains("sound used in this short") || lower.contains("original audio")) {
+      if (
+        lower.contains("reel by") ||
+        lower.contains("sound used in this short") ||
+        lower.contains("original audio") ||
+        lower.contains("original sound") ||
+        lower.contains("double tap to") ||
+        lower.contains("video by") ||
+        lower.contains("trending sound") ||
+        lower.contains("spotlight")
+      ) {
         return "$packageName:$directDesc"
       }
     }
@@ -296,14 +403,30 @@ internal class ShortVideoDetector {
         val sDesc = source.contentDescription?.toString()?.trim()
         if (!sDesc.isNullOrEmpty() && sDesc.length in 4..140) {
           val lower = sDesc.lowercase()
-          if (lower.contains("reel by") || lower.contains("original audio") || lower.contains("sound used in this short")) {
+          if (
+            lower.contains("reel by") ||
+            lower.contains("original audio") ||
+            lower.contains("sound used in this short") ||
+            lower.contains("original sound") ||
+            lower.contains("double tap to") ||
+            lower.contains("video by") ||
+            lower.contains("trending sound")
+          ) {
             return "$packageName:$sDesc"
           }
         }
         val sText = source.text?.toString()?.trim()
         val sId = source.viewIdResourceName?.lowercase() ?: ""
         if (!sText.isNullOrEmpty() && sText.length in 3..140) {
-          if (sId.contains("title") || sId.contains("author") || sId.contains("creator") || sId.contains("caption")) {
+          if (
+            sId.contains("title") ||
+            sId.contains("author") ||
+            sId.contains("creator") ||
+            sId.contains("caption") ||
+            sId.contains("desc") ||
+            sId.contains("username") ||
+            sId.contains("nickname")
+          ) {
             return "$packageName:$sText"
           }
         }
@@ -347,7 +470,16 @@ internal class ShortVideoDetector {
       val desc = node.contentDescription?.toString()?.trim()
       if (!desc.isNullOrEmpty() && desc.length in 4..140) {
         val lowerDesc = desc.lowercase()
-        if (lowerDesc.contains("reel by") || lowerDesc.contains("audio") || lowerDesc.contains("profile picture")) {
+        if (
+          lowerDesc.contains("reel by") ||
+          lowerDesc.contains("audio") ||
+          lowerDesc.contains("profile picture") ||
+          lowerDesc.contains("original sound") ||
+          lowerDesc.contains("double tap to") ||
+          lowerDesc.contains("video by") ||
+          lowerDesc.contains("spotlight") ||
+          lowerDesc.contains("trending")
+        ) {
           extractedTexts.add(desc)
         }
       }

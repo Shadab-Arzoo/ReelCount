@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/widget_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:orientation="vertical"
+  android:background="@drawable/widget_background"
+  android:padding="14dp">
+
+  <!-- Header with Polly Avatar & Title -->
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="8dp">
+
+    <ImageView
+      android:id="@+id/widget_mascot_image"
+      android:layout_width="36dp"
+      android:layout_height="36dp"
+      android:src="@drawable/polly_mascot"
+      android:scaleType="centerCrop"
+      android:contentDescription="Polly Mascot" />
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical"
+      android:layout_marginStart="10dp">
+
+      <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="POLLY · MINDFUL REELS"
+        android:textColor="#6EE3AD"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.08" />
+
+      <TextView
+        android:id="@+id/widget_mascot_mood"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Zen &amp; Calm Guide"
+        android:textColor="#A0A0B0"
+        android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
+      android:id="@+id/widget_allowance_badge"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:background="@drawable/widget_button_bg"
+      android:paddingStart="8dp"
+      android:paddingEnd="8dp"
+      android:paddingTop="3dp"
+      android:paddingBottom="3dp"
+      android:text="32 left"
+      android:textColor="#6EE3AD"
+      android:textSize="11sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+
+  <!-- Counts & Metrics -->
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:layout_marginBottom="10dp">
+
+    <TextView
+      android:id="@+id/widget_counter_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="18"
+      android:textColor="#FFFFFF"
+      android:textSize="26sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:id="@+id/widget_limit_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text=" / 50 shorts"
+      android:textColor="#888899"
+      android:textSize="13sp"
+      android:layout_marginStart="4dp" />
+  </LinearLayout>
+
+  <!-- 1-Tap 15m Focus Sprint Button -->
+  <LinearLayout
+    android:id="@+id/widget_focus_button"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/widget_button_bg"
+    android:gravity="center"
+    android:paddingTop="7dp"
+    android:paddingBottom="7dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+      android:id="@+id/widget_focus_button_text"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="15m Focus Sprint"
+      android:textColor="#6EE3AD"
+      android:textSize="12sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+</LinearLayout>

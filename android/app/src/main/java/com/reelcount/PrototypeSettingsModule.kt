@@ -74,8 +74,76 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
       putInt("youtubeLimit", prefs.getPackageLimit(TargetPackages.YOUTUBE))
       putInt("snapchatLimit", prefs.getPackageLimit(TargetPackages.SNAPCHAT))
       putString("themeAccent", prefs.getThemeAccent())
+      putBoolean("grayscaleFilterEnabled", prefs.isGrayscaleFilterEnabled())
+      putString("grayscaleTriggerMode", prefs.getGrayscaleTriggerMode())
+      putBoolean("fidgetSwipeDetectorEnabled", prefs.isFidgetSwipeEnabled())
+      putInt("fidgetSwipeCountToday", prefs.getFidgetSwipeCountToday())
+      putBoolean("consciousExitEnabled", prefs.isConsciousExitEnabled())
+      putBoolean("realityCheckEnabled", prefs.isRealityCheckEnabled())
+      putInt("nourishingCount", prefs.getNourishingCount())
+      putInt("drainingCount", prefs.getDrainingCount())
     }
     promise.resolve(result)
+  }
+
+  @ReactMethod
+  fun setGrayscaleFilter(enabled: Boolean, mode: String, promise: Promise) {
+    try {
+      prefs.setGrayscaleFilterEnabled(enabled, mode)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("GRAYSCALE_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun setFidgetSwipeDetector(enabled: Boolean, promise: Promise) {
+    try {
+      prefs.setFidgetSwipeEnabled(enabled)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("FIDGET_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun setConsciousExitEnabled(enabled: Boolean, promise: Promise) {
+    try {
+      prefs.setConsciousExitEnabled(enabled)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("CONSCIOUS_EXIT_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun setRealityCheckEnabled(enabled: Boolean, promise: Promise) {
+    try {
+      prefs.setRealityCheckEnabled(enabled)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("REALITY_CHECK_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun recordMicroLog(appName: String, durationMinutes: Int, rating: String, promise: Promise) {
+    try {
+      prefs.recordMicroLog(appName, durationMinutes, rating)
+      com.reelcount.widget.PollyWidgetProvider.updateAllWidgets(reactApplicationContext)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("MICRO_LOG_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun getMicroLogsJson(promise: Promise) {
+    try {
+      promise.resolve(prefs.getMicroLogsJson())
+    } catch (e: Exception) {
+      promise.reject("MICRO_LOGS_GET_ERROR", e.message, e)
+    }
   }
 
   @ReactMethod

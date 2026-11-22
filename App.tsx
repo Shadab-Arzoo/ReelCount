@@ -66,7 +66,6 @@ interface ThemeConfig {
   name: string;
   tagline: string;
   iconName: IconName;
-  previewBadge: string;
 }
 
 const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
@@ -86,7 +85,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Obsidian Mint',
     tagline: 'Deep Zen Clarity',
     iconName: 'sparkle',
-    previewBadge: '🌱',
   },
   emerald: {
     primary: '#6ee3ad',
@@ -104,7 +102,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Obsidian Mint',
     tagline: 'Deep Zen Clarity',
     iconName: 'sparkle',
-    previewBadge: '🌱',
   },
   cyan: {
     primary: '#38bdf8',
@@ -122,7 +119,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Cyber Sky',
     tagline: 'Electric Flow State',
     iconName: 'wave',
-    previewBadge: '⚡',
   },
   amethyst: {
     primary: '#c084fc',
@@ -140,7 +136,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Amethyst Aura',
     tagline: 'Mystic Calm & Depth',
     iconName: 'zen',
-    previewBadge: '🔮',
   },
   amber: {
     primary: '#fbbf24',
@@ -158,7 +153,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Solar Amber',
     tagline: 'Vitality & Focus',
     iconName: 'flame',
-    previewBadge: '☀️',
   },
   rose: {
     primary: '#fb7185',
@@ -176,7 +170,6 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Neon Rose',
     tagline: 'Radical Awareness',
     iconName: 'target',
-    previewBadge: '🌹',
   },
   monochrome: {
     primary: '#f9f8f9',
@@ -194,39 +187,43 @@ const THEME_COLORS: Record<ThemeAccent, ThemeConfig> = {
     name: 'Pure Titanium',
     tagline: 'Brutalist Minimal',
     iconName: 'moon',
-    previewBadge: '⚪',
   },
 };
 const themeColors = THEME_COLORS;
 
-const groundingSteps = [
+const groundingSteps: { num: number; sense: string; iconName: IconName; title: string; prompt: string }[] = [
   {
     num: 5,
-    sense: '👀 SEE',
+    sense: 'SEE',
+    iconName: 'eye',
     title: 'Acknowledge 5 things you can see',
     prompt: 'Look around your room or space. Notice the shapes, colors, or shadows of 5 objects.',
   },
   {
     num: 4,
-    sense: '✋ FEEL',
+    sense: 'FEEL',
+    iconName: 'hand',
     title: 'Acknowledge 4 things you can touch',
     prompt: 'Feel your feet on the floor, the texture of your clothing, the chair beneath you, or the cool air.',
   },
   {
     num: 3,
-    sense: '👂 HEAR',
+    sense: 'HEAR',
+    iconName: 'ear',
     title: 'Acknowledge 3 sounds you can hear',
     prompt: 'Listen for subtle noises: the hum of electronics, distant chatter, your breath, or outdoor ambience.',
   },
   {
     num: 2,
-    sense: '👃 SMELL',
+    sense: 'SMELL',
+    iconName: 'sparkle',
     title: 'Acknowledge 2 things you can smell',
     prompt: 'Take two conscious inhalations through your nose. Notice any ambient scent in the air.',
   },
   {
     num: 1,
-    sense: '👅 TASTE',
+    sense: 'TASTE',
+    iconName: 'heart',
     title: 'Acknowledge 1 thing you can taste',
     prompt: 'Swallow, relax your jaw, or take a sip of cool water. Feel your prefrontal cortex return to clarity.',
   },
@@ -240,63 +237,63 @@ const STROOP_TRIALS = [
   { text: 'CYAN', color: '#38d39f', colorName: 'Emerald' },
 ];
 
-const TRIGGER_DATA: Record<TriggerType, { label: string; icon: string; advice: string }> = {
+const TRIGGER_DATA: Record<TriggerType, { label: string; iconName: IconName; advice: string }> = {
   boredom: {
     label: 'Boredom',
-    icon: '🥱',
+    iconName: 'coffee',
     advice: 'Boredom is the brain seeking stimulation. Channel it into a 2-minute physical stretch or hydration.',
   },
   stress: {
     label: 'Stress & Anxiety',
-    icon: '😓',
+    iconName: 'wave',
     advice: 'Doomscrolling adds cognitive cortisol. Use the 4-4-4 Box Breathing reset to down-regulate your nervous system.',
   },
   procrastination: {
     label: 'Procrastination',
-    icon: '⏳',
+    iconName: 'timer',
     advice: 'Try the 2-Minute Rule: commit to doing just 120 seconds of your pending task. Starting breaks the freeze.',
   },
   habit: {
     label: 'Muscle Memory',
-    icon: '🔁',
+    iconName: 'refresh',
     advice: 'Your thumb unlocked out of reflex. The Mindful Floating HUD is here to make the invisible visible.',
   },
   fomo: {
     label: 'FOMO',
-    icon: '👥',
+    iconName: 'users',
     advice: 'Algorithms manufacture synthetic urgency. Nothing happening on social media warrants losing your focus today.',
   },
 };
 
-const intentionsList = [
-  { id: '1', title: 'Deep Work First, Feeds Later', icon: '🛡️' },
-  { id: '2', title: 'Conscious Intent, No Idle Swipes', icon: '🌿' },
-  { id: '3', title: 'Screens Off 1hr Before Sleep', icon: '🌙' },
-  { id: '4', title: 'Three Breaths Before Unlocking', icon: '🧘' },
+const intentionsList: { id: string; title: string; iconName: IconName }[] = [
+  { id: '1', title: 'Deep Work First, Feeds Later', iconName: 'shield' },
+  { id: '2', title: 'Conscious Intent, No Idle Swipes', iconName: 'leaf' },
+  { id: '3', title: 'Screens Off 1hr Before Sleep', iconName: 'moon' },
+  { id: '4', title: 'Three Breaths Before Unlocking', iconName: 'zen' },
 ];
 
-const soundscapesList = [
-  { id: 'rain' as FocusSoundscape, name: 'Gentle Rain', icon: '🌧️', desc: 'Calming rain drops' },
-  { id: 'forest' as FocusSoundscape, name: 'Pine Forest', icon: '🌲', desc: 'Wind through trees' },
-  { id: 'waves' as FocusSoundscape, name: 'Ocean Waves', icon: '🌊', desc: 'Rhythmic surf' },
-  { id: 'cafe' as FocusSoundscape, name: 'Quiet Library', icon: '☕', desc: 'Soft ambient hum' },
-  { id: 'cosmic' as FocusSoundscape, name: 'Cosmic Binaural', icon: '🌌', desc: '432Hz deep focus' },
+const soundscapesList: { id: FocusSoundscape; name: string; iconName: IconName; desc: string }[] = [
+  { id: 'rain' as FocusSoundscape, name: 'Gentle Rain', iconName: 'rain', desc: 'Calming rain drops' },
+  { id: 'forest' as FocusSoundscape, name: 'Pine Forest', iconName: 'tree', desc: 'Wind through trees' },
+  { id: 'waves' as FocusSoundscape, name: 'Ocean Waves', iconName: 'wave', desc: 'Rhythmic surf' },
+  { id: 'cafe' as FocusSoundscape, name: 'Quiet Library', iconName: 'coffee', desc: 'Soft ambient hum' },
+  { id: 'cosmic' as FocusSoundscape, name: 'Cosmic Binaural', iconName: 'sparkle', desc: '432Hz deep focus' },
 ];
 
-const moodsList = [
-  { id: 'zen' as UserMood, label: 'Zen & Calm', icon: '😊', tip: 'Your mind is present and centered.' },
-  { id: 'focused' as UserMood, label: 'Laser Focused', icon: '🎯', tip: 'Keep this deep momentum going.' },
-  { id: 'distracted' as UserMood, label: 'Mildly Restless', icon: '😐', tip: 'Take a sip of water or 1m breath.' },
-  { id: 'craving' as UserMood, label: 'Overstimulated', icon: '🌊', tip: 'Surf the wave with Craving SOS.' },
+const moodsList: { id: UserMood; label: string; iconName: IconName; tip: string }[] = [
+  { id: 'zen' as UserMood, label: 'Zen & Calm', iconName: 'zen', tip: 'Your mind is present and centered.' },
+  { id: 'focused' as UserMood, label: 'Laser Focused', iconName: 'target', tip: 'Keep this deep momentum going.' },
+  { id: 'distracted' as UserMood, label: 'Mildly Restless', iconName: 'wave', tip: 'Take a sip of water or 1m breath.' },
+  { id: 'craving' as UserMood, label: 'Overstimulated', iconName: 'flame', tip: 'Surf the wave with Craving SOS.' },
 ];
 
-const getHourDopamineProfile = (h: number) => {
+const getHourDopamineProfile = (h: number): { period: string; risk: string; color: string; iconName: IconName; tip: string } => {
   if (h >= 6 && h < 11) {
     return {
       period: 'Morning Awakening & Focus',
       risk: 'Low Risk · High Willpower',
       color: '#38d39f',
-      icon: '☀️',
+      iconName: 'sun',
       tip: 'Cortisol awakening response primes natural clarity. Keep short feeds locked during this sacred window.',
     };
   }
@@ -305,7 +302,7 @@ const getHourDopamineProfile = (h: number) => {
       period: 'Peak Execution Window',
       risk: 'Optimal Productivity',
       color: '#22d3ee',
-      icon: '🎯',
+      iconName: 'target',
       tip: 'High executive stamina. Perfect time for deep work sprints before the afternoon energy dip.',
     };
   }
@@ -314,7 +311,7 @@ const getHourDopamineProfile = (h: number) => {
       period: 'Afternoon Slump & Vulnerability',
       risk: 'High Vulnerability Spike',
       color: '#fbbf24',
-      icon: '⚡',
+      iconName: 'bolt',
       tip: 'Natural circadian dip in core temperature & dopamine. Brain seeks instant gratification. Use Focus Shield.',
     };
   }
@@ -323,7 +320,7 @@ const getHourDopamineProfile = (h: number) => {
       period: 'Twilight Leisure & Social',
       risk: 'Moderate Risk',
       color: '#a78bfa',
-      icon: '🌇',
+      iconName: 'moon',
       tip: 'Conscious wind-down time. Choose books, walks, or real conversations over mindless vertical swipes.',
     };
   }
@@ -331,19 +328,19 @@ const getHourDopamineProfile = (h: number) => {
     period: 'Melatonin Guard & Sleep Recovery',
     risk: 'Critical Disruption Zone',
     color: '#f87171',
-    icon: '🌙',
+    iconName: 'moon',
     tip: 'Short-form rapid video suppresses melatonin synthesis by up to 90 min. Keep phone away from bed.',
   };
 };
 
 const HOURLY_DOPAMINE_PROFILES = Array.from({ length: 24 }, (_, h) => getHourDopamineProfile(h));
 
-const getZenLevel = (xp: number) => {
-  if (xp >= 1200) return { level: 5, title: 'Zen Grandmaster', icon: '🌟', min: 1200, max: 2000 };
-  if (xp >= 700) return { level: 4, title: 'Attention Sovereign', icon: '👑', min: 700, max: 1200 };
-  if (xp >= 350) return { level: 3, title: 'Dopamine Alchemist', icon: '🔮', min: 350, max: 700 };
-  if (xp >= 150) return { level: 2, title: 'Feed Resistor', icon: '🛡️', min: 150, max: 350 };
-  return { level: 1, title: 'Mindful Spark', icon: '🌱', min: 0, max: 150 };
+const getZenLevel = (xp: number): { level: number; title: string; iconName: IconName; min: number; max: number } => {
+  if (xp >= 1200) return { level: 5, title: 'Zen Grandmaster', iconName: 'sparkle', min: 1200, max: 2000 };
+  if (xp >= 700) return { level: 4, title: 'Attention Sovereign', iconName: 'crown', min: 700, max: 1200 };
+  if (xp >= 350) return { level: 3, title: 'Dopamine Alchemist', iconName: 'zen', min: 350, max: 700 };
+  if (xp >= 150) return { level: 2, title: 'Feed Resistor', iconName: 'shield', min: 150, max: 350 };
+  return { level: 1, title: 'Mindful Spark', iconName: 'leaf', min: 0, max: 150 };
 };
 
 const formatTimer = (sec: number) => {
@@ -354,19 +351,19 @@ const formatTimer = (sec: number) => {
 
 const getGreeting = () => {
   const hour = new Date().getHours();
-  if (hour < 12) return { text: 'Good morning', icon: '☀️', tip: 'Fresh start — keep your morning scroll-free.' };
-  if (hour < 17) return { text: 'Good afternoon', icon: '⚡', tip: 'Notice if boredom triggers unconscious swipes.' };
-  if (hour < 22) return { text: 'Good evening', icon: '🌇', tip: 'Wind down your dopamine levels for sound sleep.' };
-  return { text: 'Late night hours', icon: '🌙', tip: 'Protect your melatonin and deep recovery rest.' };
+  if (hour < 12) return { text: 'Good morning', iconName: 'sun' as IconName, tip: 'Fresh start — keep your morning scroll-free.' };
+  if (hour < 17) return { text: 'Good afternoon', iconName: 'bolt' as IconName, tip: 'Notice if boredom triggers unconscious swipes.' };
+  if (hour < 22) return { text: 'Good evening', iconName: 'moon' as IconName, tip: 'Wind down your dopamine levels for sound sleep.' };
+  return { text: 'Late night hours', iconName: 'moon' as IconName, tip: 'Protect your melatonin and deep recovery rest.' };
 };
 
-const getChronoAnalysis = () => {
+const getChronoAnalysis = (): { level: string; badgeColor: string; iconName: IconName; title: string; advice: string } => {
   const hour = new Date().getHours();
   if (hour >= 22 || hour < 5) {
     return {
       level: 'Critical Vulnerability',
       badgeColor: '#f87171',
-      icon: '🌙',
+      iconName: 'moon',
       title: 'Melatonin & Deep Sleep Disruption',
       advice: 'Scrolling past 10 PM delays REM sleep by up to 90 minutes. Engage the Bedtime Shield now.',
     };
@@ -375,7 +372,7 @@ const getChronoAnalysis = () => {
     return {
       level: 'Moderate Slump Risk',
       badgeColor: '#fbbf24',
-      icon: '⚡',
+      iconName: 'bolt',
       title: 'Afternoon Dopamine Fatigue',
       advice: 'Post-lunch cognitive drops trigger reflex swipes. Swap phone for 5 minutes of sunlight or cold water.',
     };
@@ -384,7 +381,7 @@ const getChronoAnalysis = () => {
     return {
       level: 'Protected Morning Window',
       badgeColor: '#38d39f',
-      icon: '☀️',
+      iconName: 'sun',
       title: 'Morning Cortisol Alignment',
       advice: 'Keeping your first 60 minutes screen-free primes dopamine baseline for the entire day.',
     };
@@ -392,7 +389,7 @@ const getChronoAnalysis = () => {
   return {
     level: 'Evening Transition Zone',
     badgeColor: '#a78bfa',
-    icon: '🌇',
+    iconName: 'moon',
     title: 'Evening Decompression',
     advice: 'Avoid doomscrolling while unwinding. Give your eyes and mind real physical downtime.',
   };
@@ -499,6 +496,80 @@ function App() {
 
   // Soundscape Duration
   const [soundscapeDurationMins, setSoundscapeDurationMins] = useState(25);
+
+  // In-Feed Neuro-Interventions State
+  const [grayscaleFilterEnabled, setGrayscaleFilterEnabled] = useState(true);
+  const [grayscaleTriggerMode, setGrayscaleTriggerMode] = useState<'both' | 'overuse' | 'bedtime'>('both');
+  const [fidgetSwipeEnabled, setFidgetSwipeEnabled] = useState(true);
+  const [fidgetSwipeCount, setFidgetSwipeCount] = useState(0);
+  const [consciousExitEnabled, setConsciousExitEnabled] = useState(true);
+  const [showConsciousExitModal, setShowConsciousExitModal] = useState(false);
+  const [consciousExitCountdown, setConsciousExitCountdown] = useState(60);
+  const [realityCheckEnabled, setRealityCheckEnabled] = useState(true);
+  const [showRealityCheckModal, setShowRealityCheckModal] = useState(false);
+  const [realityCheckElapsedMins, _setRealityCheckElapsedMins] = useState(22);
+  const [realityCheckApp, _setRealityCheckApp] = useState('Instagram Reels');
+  const [nourishingCount, setNourishingCount] = useState(8);
+  const [drainingCount, setDrainingCount] = useState(4);
+
+  // Mascot Floating HUD Adaptive Simulator State
+  const [simulatedHudSwipes, setSimulatedHudSwipes] = useState(18);
+
+  // Polly's Morning Alignment State
+  const [showMorningAlignment, setShowMorningAlignment] = useState(false);
+  const [morningReclaimedMins, _setMorningReclaimedMins] = useState(45);
+  const [morningCountdown, setMorningCountdown] = useState(5);
+  const hasTriggeredMorningCheck = useRef(false);
+
+  // Polly's Morning Alignment Card - Auto-trigger on morning hours
+  useEffect(() => {
+    if ((globalThis as any).process?.env?.NODE_ENV === 'test') return;
+    if (hasTriggeredMorningCheck.current) return;
+    hasTriggeredMorningCheck.current = true;
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 14) {
+      setShowMorningAlignment(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (showMorningAlignment) {
+      setMorningCountdown(5);
+      timer = setInterval(() => {
+        setMorningCountdown(prev => {
+          if (prev <= 1) {
+            setShowMorningAlignment(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showMorningAlignment]);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (showConsciousExitModal) {
+      setConsciousExitCountdown(60);
+      timer = setInterval(() => {
+        setConsciousExitCountdown(prev => {
+          if (prev <= 1) {
+            setShowConsciousExitModal(false);
+            Alert.alert('Mindful Session Complete', 'Phone rested face down.');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [showConsciousExitModal]);
 
   // Ambient Mindful Hero Ring Breathing Animation
   const ringBreathAnim = useRef(new Animated.Value(0)).current;
@@ -698,20 +769,21 @@ function App() {
     return themes[(currentIndex + 1) % themes.length];
   };
 
-  const getQuickActionsForTab = (idx: number) => {
+  const getQuickActionsForTab = (idx: number): { label: string; icon: IconName; action: () => void }[] => {
     switch (idx) {
       case 0:
         return [
-          { label: '🧘 1m Reset Breath', action: () => openCravingModal('breathing') },
-          { label: '⚡ 15m Focus Sprint', action: () => handleQuickFocus15m() },
-          { label: '🔄 Reset Today (0)', action: () => handleResetCounters() },
+          { label: '1m Reset Breath', icon: 'zen', action: () => openCravingModal('breathing') },
+          { label: '15m Focus Sprint', icon: 'bolt', action: () => handleQuickFocus15m() },
+          { label: 'Reset Today (0)', icon: 'refresh', action: () => handleResetCounters() },
         ];
       case 1:
         return [
-          { label: '+5 Daily Limit', action: () => handleAdjustLimit(5) },
-          { label: '-5 Daily Limit', action: () => handleAdjustLimit(-5) },
+          { label: '+5 Daily Limit', icon: 'timer', action: () => handleAdjustLimit(5) },
+          { label: '-5 Daily Limit', icon: 'timer', action: () => handleAdjustLimit(-5) },
           {
-            label: bedtimeShield ? '☀️ Day Feeds' : '🌙 Bedtime Shield',
+            label: bedtimeShield ? 'Day Feeds' : 'Bedtime Shield',
+            icon: 'moon',
             action: () => {
               const n = !bedtimeShield;
               setBedtimeShield(n);
@@ -722,15 +794,17 @@ function App() {
       case 2:
         return [
           {
-            label: '🍅 25m Focus Sprint',
+            label: '25m Focus Sprint',
+            icon: 'timer',
             action: () => {
               handleSelectFocusPreset(25);
               handleToggleFocusSession();
             },
           },
-          { label: '🌊 90s Wave Surfer', action: () => openCravingModal('delay') },
+          { label: '90s Wave Surfer', icon: 'wave', action: () => openCravingModal('delay') },
           {
-            label: '🧠 Stroop Urge Gate',
+            label: 'Stroop Urge Gate',
+            icon: 'brain',
             action: () => {
               resetStroop();
               openCravingModal('stroop');
@@ -740,7 +814,8 @@ function App() {
       case 3:
         return [
           {
-            label: '🎨 Next Palette',
+            label: 'Next Palette',
+            icon: 'palette',
             action: () => {
               const next = nextThemeAccent();
               setThemeAccent(next);
@@ -748,10 +823,11 @@ function App() {
             },
           },
           {
-            label: '🛡️ Accessibility',
+            label: 'Accessibility',
+            icon: 'shield',
             action: () => PrototypeSettings.openAccessibilitySettings(),
           },
-          { label: '📤 Share Progress', action: () => shareMindfulProgress() },
+          { label: 'Share Progress', icon: 'share', action: () => shareMindfulProgress() },
         ];
       default:
         return [];
@@ -1058,6 +1134,12 @@ function App() {
         hasScrubbedRef.current = false;
         setIsDraggingDock(true);
 
+        // Cancel any pending long-press quick action timer when pan starts
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+
         const screenX = gesture.x0 || evt.nativeEvent.pageX;
         const dockX = getDockRelativeX(screenX, evt.nativeEvent.locationX);
         const idx = getTabIndexFromDockX(dockX);
@@ -1098,6 +1180,11 @@ function App() {
 
         if (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3) {
           hasScrubbedRef.current = true;
+          // Kill long-press timer the moment scrubbing motion is detected
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
         }
 
         const screenX =
@@ -1382,6 +1469,30 @@ function App() {
           if (status.onboardingCompleted && !hasManuallyOpenedIntro) {
             setShowIntro(false);
           }
+          if (status.grayscaleFilterEnabled !== undefined) {
+            setGrayscaleFilterEnabled(status.grayscaleFilterEnabled);
+          }
+          if (status.grayscaleTriggerMode) {
+            setGrayscaleTriggerMode(status.grayscaleTriggerMode as any);
+          }
+          if (status.fidgetSwipeDetectorEnabled !== undefined) {
+            setFidgetSwipeEnabled(status.fidgetSwipeDetectorEnabled);
+          }
+          if (status.fidgetSwipeCountToday !== undefined) {
+            setFidgetSwipeCount(status.fidgetSwipeCountToday);
+          }
+          if (status.consciousExitEnabled !== undefined) {
+            setConsciousExitEnabled(status.consciousExitEnabled);
+          }
+          if (status.realityCheckEnabled !== undefined) {
+            setRealityCheckEnabled(status.realityCheckEnabled);
+          }
+          if (status.nourishingCount !== undefined) {
+            setNourishingCount(status.nourishingCount);
+          }
+          if (status.drainingCount !== undefined) {
+            setDrainingCount(status.drainingCount);
+          }
 
           // Smart History Fetch: Only fetch history if candidateCount changed or on initial load
           if (lastHistoryCandidateCountRef.current !== status.candidateCount || dayHistoryRef.current.length === 0) {
@@ -1451,7 +1562,7 @@ function App() {
             setFocusTimerRunning(false);
             setFocusModeActive(false);
             PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
-            Alert.alert('Focus Session Complete! 🏆', 'Great job avoiding distraction and staying on track.');
+            Alert.alert('Focus Session Complete!', 'Great job avoiding distraction and staying on track.');
             return 0;
           }
           return prev - 1;
@@ -1471,7 +1582,7 @@ function App() {
         setBreatheSecondsRemaining(prev => {
           if (prev <= 1) {
             setShowCravingModal(false);
-            Alert.alert('Mindful Reset Complete 🌿', 'Take this calm awareness with you into your day.');
+            Alert.alert('Mindful Reset Complete', 'Take this calm awareness with you into your day.');
             return 60;
           }
           return prev - 1;
@@ -1505,7 +1616,7 @@ function App() {
           if (prev <= 1) {
             setDelayRunning(false);
             Alert.alert(
-              'Craving Wave Surfed! 🌊',
+              'Craving Wave Surfed!',
               'Awesome impulse victory! You waited out the craving spike and allowed your prefrontal cortex to regain control.',
             );
             return 90;
@@ -1752,10 +1863,10 @@ function App() {
   const shareMindfulProgress = useCallback(async () => {
     try {
       const text =
-        `🎬 ReelCount Mindful Habit Summary:\n` +
-        `🔥 ${mindfulStreak}-Day Mindful Streak\n` +
-        `⏱️ ${estMinutes}m watched today · ~${timeSavedMins}m saved beyond screen\n` +
-        `🧘 Attention Mastery: ${zenXp} Zen XP\n` +
+        `ReelCount Mindful Habit Summary:\n` +
+        `${mindfulStreak}-Day Mindful Streak\n` +
+        `${estMinutes}m watched today · ~${timeSavedMins}m saved beyond screen\n` +
+        `Attention Mastery: ${zenXp} Zen XP\n` +
         `Take control of short-form doomscrolling with ReelCount!`;
       await Share.share({ message: text });
     } catch {}
@@ -1763,32 +1874,32 @@ function App() {
 
   const chronoShield = useMemo(() => getChronoAnalysis(), []);
 
-  const milestones = useMemo(
+  const milestones: { id: string; iconName: IconName; name: string; desc: string; unlocked: boolean }[] = useMemo(
     () => [
       {
         id: 'cap',
-        icon: '🎯',
+        iconName: 'target',
         name: 'Cap Champion',
         desc: 'Inside daily target',
         unlocked: totalShorts <= dailyLimit,
       },
       {
         id: 'zen',
-        icon: '🧘',
+        iconName: 'zen',
         name: 'Zen Master',
         desc: 'Used Craving Reset',
         unlocked: true,
       },
       {
         id: 'shield',
-        icon: '🛡️',
+        iconName: 'shield',
         name: 'Focus Guardian',
         desc: 'Protected deep work',
         unlocked: focusTimerRunning || focusTimerSeconds < 15 * 60,
       },
       {
         id: 'streak',
-        icon: '🔥',
+        iconName: 'flame',
         name: `${mindfulStreak}d Streak`,
         desc: 'Consistent impulse control',
         unlocked: mindfulStreak >= 1,
@@ -1828,10 +1939,10 @@ function App() {
         setDailyQuestsClaimed(prev => ({ ...prev, reset: true }));
       } else {
         setStroopRound(prev => prev + 1);
-        setStroopFeedback('✨ Correct! Prefrontal cortex taking over.');
+        setStroopFeedback('Correct! Prefrontal cortex taking over.');
       }
     } else {
-      setStroopFeedback('⚠️ Autopilot reflex detected! Focus on the INK COLOR.');
+      setStroopFeedback('Autopilot reflex detected! Focus on the INK COLOR.');
     }
   };
 
@@ -1856,7 +1967,7 @@ function App() {
     PrototypeSettings.logTrigger(t).catch(() => {});
     PrototypeSettings.addZenXp(10).then(setZenXp).catch(() => {});
     Alert.alert(
-      `${TRIGGER_DATA[t].icon} Impulse Acknowledged (+10 XP)`,
+      'Impulse Acknowledged (+10 XP)',
       TRIGGER_DATA[t].advice,
     );
   };
@@ -1893,10 +2004,17 @@ function App() {
         {/* Top Header Bar */}
         <View style={styles.introTopBar}>
           <View style={styles.introBrandRow}>
-            <View style={[styles.brandBadgeWrap, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
-              <AppIcon name="reels" size={16} color={currentTheme.primary} />
+            <View style={[styles.brandMascotWrap, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
+              <Image
+                source={require('./src/assets/images/app_mascot.jpg')}
+                style={styles.introHeaderMascot}
+                resizeMode="cover"
+              />
             </View>
-            <Text style={styles.introBrandName}>ReelCount</Text>
+            <View>
+              <Text style={styles.introBrandName}>ReelCount</Text>
+              <Text style={[styles.introBrandMascotSub, { color: currentTheme.primary }]}>GUIDED BY POLLY</Text>
+            </View>
           </View>
 
           {!isLastSlide ? (
@@ -1987,6 +2105,25 @@ function App() {
                   Quietly observe short video scrolling across Instagram Reels, YouTube Shorts, and TikTok before hours slip away.
                 </Text>
 
+                {/* Meet Polly Hero Banner */}
+                <View style={[styles.introMascotWelcomeHero, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+                  <Image
+                    source={require('./src/assets/images/app_mascot.jpg')}
+                    style={styles.introMascotHeroLarge}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.introMascotWelcomeTextWrap}>
+                    <View style={[styles.introMascotBadgePill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                      <AppIcon name="sparkle" size={11} color={currentTheme.primary} />
+                      <Text style={[styles.introMascotBadgeText, { color: currentTheme.primary }]}>YOUR MINDFUL GUIDE</Text>
+                    </View>
+                    <Text style={styles.introMascotWelcomeTitle}>Hi, I'm Polly!</Text>
+                    <Text style={styles.introMascotWelcomeDesc}>
+                      Short feeds are engineered to steal hours. I'm here to help you enjoy reels consciously without the dopamine drag!
+                    </Text>
+                  </View>
+                </View>
+
                 {/* Interactive Boundary Goal Selector */}
                 <View style={styles.introInteractiveSection}>
                   <Text style={[styles.introSectionMiniTitle, { color: currentTheme.primary }]}>
@@ -1994,9 +2131,9 @@ function App() {
                   </Text>
                   <View style={styles.introGoalRow}>
                     {[
-                      { cap: 25, label: 'Strict Detox', sub: '~12m / day', icon: '⚡' },
-                      { cap: 50, label: 'Balanced', sub: '~25m (Recommended)', icon: '🌿' },
-                      { cap: 100, label: 'Gentle', sub: '~50m / day', icon: '🎯' },
+                      { cap: 25, label: 'Strict Detox', sub: '~12m / day', iconName: 'bolt' as IconName },
+                      { cap: 50, label: 'Balanced', sub: '~25m (Recommended)', iconName: 'leaf' as IconName },
+                      { cap: 100, label: 'Gentle', sub: '~50m / day', iconName: 'target' as IconName },
                     ].map(preset => {
                       const isSelected = dailyLimit === preset.cap;
                       return (
@@ -2015,7 +2152,7 @@ function App() {
                             },
                           ]}
                         >
-                          <Text style={styles.introGoalOptionIcon}>{preset.icon}</Text>
+                          <AppIcon name={preset.iconName} size={20} color={isSelected ? currentTheme.primary : currentTheme.subtext} style={{ marginBottom: 6 }} />
                           <Text style={[styles.introGoalOptionCap, isSelected && { color: currentTheme.primary }]}>
                             {preset.cap}
                           </Text>
@@ -2024,6 +2161,35 @@ function App() {
                         </Pressable>
                       );
                     })}
+                  </View>
+                </View>
+
+                {/* Mascot Live Habit Advice */}
+                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+                  <View style={styles.introMascotRow}>
+                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                      <Image
+                        source={require('./src/assets/images/app_mascot.jpg')}
+                        style={styles.introMascotAvatar}
+                        resizeMode="cover"
+                      />
+                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
+                    </View>
+                    <View style={styles.introMascotSpeechWrap}>
+                      <View style={styles.introMascotHeaderRow}>
+                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly's Habit Advice</Text>
+                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>RECOMMENDED</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introMascotSpeech}>
+                        {dailyLimit === 25
+                          ? 'Strict Detox selected! You will reclaim ~2 hours every single day for real-world life and creative focus.'
+                          : dailyLimit === 50
+                          ? 'Balanced 50-swipe boundary! The sweet spot: enjoy content during breaks without falling into autopilot scrolling.'
+                          : 'Gentle 100-swipe cap! Keeps late-night rabbit holes from spiraling out of control while easing into habit change.'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
@@ -2098,13 +2264,47 @@ function App() {
                     }}
                     style={[styles.introSimulateSwipeBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
                   >
-                    <Text style={[styles.introSimulateSwipeText, { color: currentTheme.actionText }]}>
-                      ⚡ Tap to Simulate Video Swipe (+1)
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <AppIcon name="bolt" size={15} color={currentTheme.actionText} />
+                      <Text style={[styles.introSimulateSwipeText, { color: currentTheme.actionText }]}>
+                        Tap to Simulate Video Swipe (+1)
+                      </Text>
+                    </View>
                   </Pressable>
                   <Text style={styles.introSimulateHelpText}>
                     Discreetly floats on top of Instagram, TikTok, and YouTube with gentle haptic ticks.
                   </Text>
+                </View>
+
+                {/* Mascot Live Swipe Reaction Card */}
+                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+                  <View style={styles.introMascotRow}>
+                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                      <Image
+                        source={require('./src/assets/images/app_mascot.jpg')}
+                        style={styles.introMascotAvatar}
+                        resizeMode="cover"
+                      />
+                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
+                    </View>
+                    <View style={styles.introMascotSpeechWrap}>
+                      <View style={styles.introMascotHeaderRow}>
+                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Tactile Coach</Text>
+                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>
+                            {introDemoHudCount > 2 ? 'ACTIVE PULSE' : 'TRY SWIPING'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introMascotSpeech}>
+                        {introDemoHudCount <= 2
+                          ? 'Tap the button above to test me! Each swipe triggers a gentle haptic click to break autopilot mesmerization.'
+                          : introDemoHudCount <= 5
+                          ? `Swipe #${introDemoHudCount} counted! Feel that gentle pulse? It wakes up your prefrontal cortex before mindless scrolling takes over.`
+                          : `${introDemoHudCount} swipes simulated! You can drag this floating pill anywhere on screen inside real video apps.`}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.introChipRow}>
@@ -2165,7 +2365,10 @@ function App() {
                   >
                     <View style={styles.introShieldCol}>
                       <View style={styles.introShieldTitleRow}>
-                        <Text style={styles.introShieldTitle}>🌙 11 PM Sleep Sanctuary</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <AppIcon name="moon" size={16} color={currentTheme.primary} />
+                          <Text style={styles.introShieldTitle}>11 PM Sleep Sanctuary</Text>
+                        </View>
                         <View
                           style={[
                             styles.introShieldActiveTag,
@@ -2208,7 +2411,10 @@ function App() {
                   >
                     <View style={styles.introShieldCol}>
                       <View style={styles.introShieldTitleRow}>
-                        <Text style={styles.introShieldTitle}>🧘 Mindful Speedbump</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <AppIcon name="zen" size={16} color={currentTheme.primary} />
+                          <Text style={styles.introShieldTitle}>Mindful Speedbump</Text>
+                        </View>
                         <View
                           style={[
                             styles.introShieldActiveTag,
@@ -2234,6 +2440,37 @@ function App() {
                       </Text>
                     </View>
                   </Pressable>
+                </View>
+
+                {/* Mascot Circadian Wisdom Card */}
+                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+                  <View style={styles.introMascotRow}>
+                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                      <Image
+                        source={require('./src/assets/images/app_mascot.jpg')}
+                        style={styles.introMascotAvatar}
+                        resizeMode="cover"
+                      />
+                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
+                    </View>
+                    <View style={styles.introMascotSpeechWrap}>
+                      <View style={styles.introMascotHeaderRow}>
+                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Circadian Wisdom</Text>
+                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>DEEP REST</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introMascotSpeech}>
+                        {bedtimeShield && speedbumpEnabled
+                          ? 'Both shields armed! Bedtime lockdown defends melatonin after 11 PM, and speedbumps give 5s breath breaks.'
+                          : bedtimeShield
+                          ? 'Sleep Sanctuary armed! Late night doomscrolling will be locked at 11 PM so you get deep REM sleep.'
+                          : speedbumpEnabled
+                          ? 'Speedbump active! You get a gentle 5-second breath pause every 15 videos to choose consciously.'
+                          : 'Tip: Late-night phone blue light delays REM sleep by up to 90 minutes. Turn on Sleep Sanctuary for sound sleep!'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 <View style={styles.introChipRow}>
@@ -2277,6 +2514,35 @@ function App() {
                   Zero network transmission. No screen content, chats, passwords, or personal data are ever read.
                 </Text>
 
+                {/* Mascot Setup Guidance Card */}
+                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+                  <View style={styles.introMascotRow}>
+                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                      <Image
+                        source={require('./src/assets/images/app_mascot.jpg')}
+                        style={styles.introMascotAvatar}
+                        resizeMode="cover"
+                      />
+                      <View style={[styles.introMascotStatusDot, { backgroundColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]} />
+                    </View>
+                    <View style={styles.introMascotSpeechWrap}>
+                      <View style={styles.introMascotHeaderRow}>
+                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly's Setup Checklist</Text>
+                        <View style={[styles.introMascotPill, { backgroundColor: prototypeStatus.serviceConnected ? 'rgba(56, 211, 159, 0.15)' : currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                          <Text style={[styles.introMascotPillText, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
+                            {prototypeStatus.serviceConnected ? 'ALL CHECKS GREEN' : '100% PRIVATE'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.introMascotSpeech}>
+                        {prototypeStatus.serviceConnected
+                          ? 'My checklist is complete! On-device tracking is live, private, and running smoothly. Welcome to your Sanctuary!'
+                          : 'I run 100% on your device with zero internet permissions. Just follow the 3 quick steps on my checklist below!'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
                 {/* 3-Step Visual Setup Guide */}
                 <View style={[styles.introSetupGuideCard, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
                   <Text style={[styles.introSetupGuideHeader, { color: currentTheme.primary }]}>
@@ -2314,10 +2580,14 @@ function App() {
                 {/* Celebratory Live Badge if connected */}
                 {prototypeStatus.serviceConnected && (
                   <View style={[styles.introCelebrationCard, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-                    <AppIcon name="check" size={20} color={currentTheme.primary} />
+                    <Image
+                      source={require('./src/assets/images/app_mascot.jpg')}
+                      style={styles.introCelebrationMascot}
+                      resizeMode="cover"
+                    />
                     <View style={styles.introCelebrationCol}>
                       <Text style={[styles.introCelebrationTitle, { color: currentTheme.primary }]}>
-                        Service Calibrated & Live Active!
+                        Polly is Calibrated & Live Active!
                       </Text>
                       <Text style={styles.introCelebrationSub}>
                         ReelCount is quietly protecting your attention 100% on-device.
@@ -2336,18 +2606,21 @@ function App() {
                         : styles.statusBadgeInactive,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.statusBadgeText,
-                        prototypeStatus.serviceConnected
-                          ? [styles.statusBadgeTextActive, { color: currentTheme.primary }]
-                          : styles.statusBadgeTextInactive,
-                      ]}
-                    >
-                      {prototypeStatus.serviceConnected
-                        ? '● Accessibility Service Connected'
-                        : '○ Service Not Enabled'}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <AppIcon name={prototypeStatus.serviceConnected ? 'check' : 'alert'} size={14} color={prototypeStatus.serviceConnected ? currentTheme.primary : '#a0a0a0'} />
+                      <Text
+                        style={[
+                          styles.statusBadgeText,
+                          prototypeStatus.serviceConnected
+                            ? [styles.statusBadgeTextActive, { color: currentTheme.primary }]
+                            : styles.statusBadgeTextInactive,
+                        ]}
+                      >
+                        {prototypeStatus.serviceConnected
+                          ? 'Accessibility Service Connected'
+                          : 'Service Not Enabled'}
+                      </Text>
+                    </View>
                   </View>
                   <Text style={styles.body}>
                     Session scroll events detected: {prototypeStatus.candidateCount}
@@ -2565,7 +2838,7 @@ function App() {
       {/* Daily Compass & Zen XP Banner */}
       <View style={[styles.dashboardCompassStrip, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.dashboardCompassLeft}>
-          <Text style={styles.dashboardCompassIcon}>🧭</Text>
+          <AppIcon name="compass" size={20} color={currentTheme.primary} style={{ marginRight: 8 }} />
           <View style={styles.dashboardCompassContent}>
             <Text style={[styles.dashboardCompassEyebrow, { color: currentTheme.primary }]}>DAILY COMPASS</Text>
             <Text style={styles.dashboardCompassTitle} numberOfLines={1}>"{selectedIntention}"</Text>
@@ -2612,18 +2885,25 @@ function App() {
                 : [styles.habitPillSafe, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
             ]}
           >
-            <Text
-              style={[
-                styles.habitPillText,
-                isOverLimit
-                  ? styles.habitPillTextDanger
-                  : isNearLimit
-                  ? styles.habitPillTextWarning
-                  : [styles.habitPillTextSafe, { color: currentTheme.primary }],
-              ]}
-            >
-              {isOverLimit ? '🚨 LIMIT BREACHED' : isNearLimit ? '⚡ APPROACHING LIMIT' : '🌱 MINDFUL PACE'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <AppIcon
+                name={isOverLimit ? 'bell' : isNearLimit ? 'bolt' : 'leaf'}
+                size={13}
+                color={isOverLimit ? '#f87171' : isNearLimit ? '#fbbf24' : currentTheme.primary}
+              />
+              <Text
+                style={[
+                  styles.habitPillText,
+                  isOverLimit
+                    ? styles.habitPillTextDanger
+                    : isNearLimit
+                    ? styles.habitPillTextWarning
+                    : [styles.habitPillTextSafe, { color: currentTheme.primary }],
+                ]}
+              >
+                {isOverLimit ? 'LIMIT BREACHED' : isNearLimit ? 'APPROACHING LIMIT' : 'MINDFUL PACE'}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.heroTopActions}>
@@ -2634,7 +2914,10 @@ function App() {
               }}
               style={[styles.zenPauseButton, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}
             >
-              <Text style={[styles.zenPauseButtonText, { color: currentTheme.primary }]}>🧘 1m Reset</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <AppIcon name="zen" size={13} color={currentTheme.primary} />
+                <Text style={[styles.zenPauseButtonText, { color: currentTheme.primary }]}>1m Reset</Text>
+              </View>
             </Pressable>
             <Pressable
               onPress={() => {
@@ -2750,9 +3033,12 @@ function App() {
 
         {/* Dynamic Mindful Insight Card */}
         <View style={[styles.heroMindfulInsightBanner, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-          <Text style={styles.heroMindfulInsightIcon}>
-            {isOverLimit ? '🛑' : isNearLimit ? '⚡' : '🌱'}
-          </Text>
+          <AppIcon
+            name={isOverLimit ? 'shield' : isNearLimit ? 'bolt' : 'leaf'}
+            size={18}
+            color={isOverLimit ? '#f87171' : isNearLimit ? '#fbbf24' : currentTheme.primary}
+            style={{ marginRight: 8 }}
+          />
           <Text style={[styles.heroMindfulInsightText, { color: currentTheme.primary }]}>
             {isOverLimit
               ? `Target exceeded by ${totalShorts - dailyLimit} videos. Rest your prefrontal cortex.`
@@ -2801,6 +3087,208 @@ function App() {
         )}
       </View>
 
+      {/* POLLY'S MORNING ALIGNMENT CARD LAUNCHER */}
+      <View style={[styles.morningLauncherCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+        <View style={styles.morningLauncherRow}>
+          <View style={[styles.morningAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+            <Image
+              source={require('./src/assets/images/app_mascot.jpg')}
+              style={styles.morningAvatarThumb}
+              resizeMode="cover"
+            />
+          </View>
+          <View style={styles.morningLauncherCol}>
+            <View style={styles.morningLauncherEyebrowRow}>
+              <Text style={[styles.morningLauncherEyebrow, { color: currentTheme.primary }]}>POLLY'S MORNING ALIGNMENT</Text>
+              <View style={[styles.morningLauncherBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                <Text style={[styles.morningLauncherBadgeText, { color: currentTheme.primary }]}>DAILY CARD</Text>
+              </View>
+            </View>
+            <Text style={styles.morningLauncherTitle}>
+              Yesterday you reclaimed {morningReclaimedMins} minutes beyond feeds.
+            </Text>
+            <Text style={styles.morningLauncherSubtitle}>
+              Let's keep your morning screen-free and set today's intention.
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={() => {
+            triggerDockHaptic();
+            setShowMorningAlignment(true);
+          }}
+          style={[styles.morningLauncherActionBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <AppIcon name="sun" size={14} color={currentTheme.actionText} />
+            <Text style={[styles.morningLauncherActionText, { color: currentTheme.actionText }]}>
+              View 5-Second Morning Alignment Card →
+            </Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* POLLY ON THE FLOATING HUD: ADAPTIVE EXPRESSIONS SHOWCASE */}
+      <View style={[styles.mascotHudCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+        <View style={styles.cardHeaderWithAction}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="reels" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Polly on the Floating HUD</Text>
+          </View>
+          <View style={[styles.mascotExpressionBadge, {
+            backgroundColor: simulatedHudSwipes < 25 ? 'rgba(110, 227, 173, 0.15)' : simulatedHudSwipes < 50 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 113, 133, 0.15)',
+            borderColor: simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
+          }]}>
+            <Text style={[styles.mascotExpressionBadgeText, {
+              color: simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
+            }]}>
+              {simulatedHudSwipes < 25 ? 'CALM (0-25)' : simulatedHudSwipes < 50 ? 'ATTENTIVE (25-50)' : 'REST NEEDED (50+)'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.cardSubtitle}>
+          Instead of just a raw number, Polly's mini face hovers over video feeds and adapts her expression to your swipe depth:
+        </Text>
+
+        {/* Live Adaptive HUD Stage */}
+        <View style={styles.mascotHudStage}>
+          {(() => {
+            const moodColor = simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185';
+            const moodLabel = simulatedHudSwipes < 25 ? 'Zen Guide' : simulatedHudSwipes < 50 ? 'Focus Mode' : 'Rest Alert';
+            return (
+              <View style={[styles.mascotHudPreviewPill, { borderColor: moodColor }]}>
+                {/* Circular Mascot Avatar with Mood Ring */}
+                <View style={[styles.mascotHudAvatarRing, { borderColor: moodColor }]}>
+                  <Image
+                    source={require('./src/assets/images/app_mascot.jpg')}
+                    style={styles.mascotHudAvatarImg}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.mascotHudPillTextCol}>
+                  <Text style={styles.mascotHudPillTitle}>{moodLabel}:</Text>
+                  <Text style={[styles.mascotHudPillCount, { color: moodColor }]}>
+                    {simulatedHudSwipes} swipes
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+
+        {/* Dynamic Expression Coaching Text */}
+        <View style={[styles.mascotCoachingCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
+          <Text style={styles.mascotCoachingDesc}>
+            {simulatedHudSwipes < 25
+              ? '• 0–25 Swipes: Calm, cheerful, headphones on. Polly keeps a tranquil presence while pacing is mindful.'
+              : simulatedHudSwipes < 50
+              ? '• 25–50 Swipes: Attentive, pointing to checklist. Polly perks up to gently signal you are approaching your threshold.'
+              : '• 50+ Swipes: Sleepy/concerned, holding up a gentle hand. Polly urges a breath pause to protect your cognitive stamina.'}
+          </Text>
+        </View>
+
+        {/* Interactive State Selector */}
+        <View style={styles.mascotStateBtnRow}>
+          {[
+            { swipes: 14, label: '14 Swipes (Calm)' },
+            { swipes: 38, label: '38 Swipes (Attentive)' },
+            { swipes: 62, label: '62 Swipes (Rest)' },
+          ].map(opt => (
+            <Pressable
+              key={opt.swipes}
+              onPress={() => {
+                triggerDockHaptic();
+                setSimulatedHudSwipes(opt.swipes);
+              }}
+              style={[
+                styles.mascotStateBtn,
+                { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised },
+                simulatedHudSwipes === opt.swipes && [
+                  styles.mascotStateBtnActive,
+                  { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
+                ],
+              ]}
+            >
+              <Text
+                style={[
+                  styles.mascotStateBtnText,
+                  simulatedHudSwipes === opt.swipes && [styles.mascotStateBtnTextActive, { color: currentTheme.primary }],
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* POLLY ANDROID HOME SCREEN WIDGET SHOWCASE */}
+      <View style={[styles.widgetShowcaseCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+        <View style={styles.cardHeaderWithAction}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="dashboard" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Polly Home Screen Widget</Text>
+          </View>
+          <View style={[styles.activeThemeBadgePill, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
+            <Text style={[styles.activeThemeBadgeText, { color: currentTheme.primary }]}>ANDROID NATIVE</Text>
+          </View>
+        </View>
+        <Text style={styles.cardSubtitle}>
+          Set mindful intention before launching any app. Live count, remaining allowance, and a 1-tap Focus Sprint directly on your desktop.
+        </Text>
+
+        {/* Native Widget Preview Box */}
+        <View style={[styles.widgetBoxPreview, { borderColor: currentTheme.border }]}>
+          <View style={styles.widgetBoxHeader}>
+            <View style={styles.widgetMascotHeaderRow}>
+              <View style={[styles.widgetAvatarWrap, { borderColor: currentTheme.primary }]}>
+                <Image
+                  source={require('./src/assets/images/app_mascot.jpg')}
+                  style={styles.widgetAvatarImg}
+                  resizeMode="cover"
+                />
+              </View>
+              <View style={styles.widgetTitleCol}>
+                <Text style={[styles.widgetBoxTitle, { color: currentTheme.primary }]}>POLLY · MINDFUL REELS</Text>
+                <Text style={styles.widgetBoxMood}>
+                  {focusModeActive ? 'Focus Shield Active' : totalShorts < 25 ? 'Zen & Calm Guide' : totalShorts < 50 ? 'Attentive Focus' : 'Mindful Rest Needed'}
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.widgetAllowanceBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+              <Text style={[styles.widgetAllowanceText, { color: currentTheme.primary }]}>
+                {Math.max(0, dailyLimit - totalShorts)} left
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.widgetCounterRow}>
+            <Text style={styles.widgetBigCount}>{totalShorts}</Text>
+            <Text style={styles.widgetLimitLabel}> / {dailyLimit} shorts today</Text>
+          </View>
+
+          {/* 1-Tap 15m Focus Sprint Button */}
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              handleQuickFocus15m();
+            }}
+            style={[styles.widgetSprintBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <AppIcon name="bolt" size={14} color={currentTheme.actionText} />
+              <Text style={[styles.widgetSprintBtnText, { color: currentTheme.actionText }]}>
+                {focusModeActive ? 'Focus Shield Active (Tap to Stop)' : '1-Tap 15m Focus Sprint'}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+        <Text style={styles.widgetInstructionsText}>
+          How to add: Long-press your phone's Home Screen → tap Widgets → select Polly → place on your screen.
+        </Text>
+      </View>
+
       {/* App-by-App Breakdown */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
@@ -2812,10 +3300,10 @@ function App() {
         </Text>
 
         {[
-          { id: 'instagram', name: 'Instagram Reels', count: igCount, unit: 'reels', icon: '📸', pkg: TARGET_PACKAGES.INSTAGRAM, circleStyle: styles.igCircle, fillStyle: styles.igFill },
-          { id: 'tiktok', name: 'TikTok', count: ttCount, unit: 'videos', icon: '🎵', pkg: TARGET_PACKAGES.TIKTOK, circleStyle: styles.ttCircle, fillStyle: styles.ttFill },
-          { id: 'youtube', name: 'YouTube Shorts', count: ytCount, unit: 'shorts', icon: '▶️', pkg: TARGET_PACKAGES.YOUTUBE, circleStyle: styles.ytCircle, fillStyle: styles.ytFill },
-          { id: 'snapchat', name: 'Snapchat Spotlight', count: scCount, unit: 'clips', icon: '👻', pkg: TARGET_PACKAGES.SNAPCHAT, circleStyle: styles.scCircle, fillStyle: styles.scFill },
+          { id: 'instagram', name: 'Instagram Reels', count: igCount, unit: 'reels', iconName: 'camera' as IconName, pkg: TARGET_PACKAGES.INSTAGRAM, circleStyle: styles.igCircle, fillStyle: styles.igFill },
+          { id: 'tiktok', name: 'TikTok', count: ttCount, unit: 'videos', iconName: 'music' as IconName, pkg: TARGET_PACKAGES.TIKTOK, circleStyle: styles.ttCircle, fillStyle: styles.ttFill },
+          { id: 'youtube', name: 'YouTube Shorts', count: ytCount, unit: 'shorts', iconName: 'play' as IconName, pkg: TARGET_PACKAGES.YOUTUBE, circleStyle: styles.ytCircle, fillStyle: styles.ytFill },
+          { id: 'snapchat', name: 'Snapchat Spotlight', count: scCount, unit: 'clips', iconName: 'ghost' as IconName, pkg: TARGET_PACKAGES.SNAPCHAT, circleStyle: styles.scCircle, fillStyle: styles.scFill },
         ].map(platform => {
           const isExpanded = expandedPlatform === platform.id;
           const sharePercent = totalShorts > 0 ? Math.round((platform.count / totalShorts) * 100) : 0;
@@ -2835,7 +3323,7 @@ function App() {
             >
               <View style={styles.platformCardTopRow}>
                 <View style={[styles.platformIconCircle, platform.circleStyle]}>
-                  <Text style={styles.platformIconEmoji}>{platform.icon}</Text>
+                  <AppIcon name={platform.iconName} size={18} color="#ffffff" />
                 </View>
                 <View style={styles.platformDetailsCol}>
                   <View style={styles.platformTitleRow}>
@@ -3010,21 +3498,24 @@ function App() {
         {/* Selected Day Insight Card */}
         {selectedHistoryIndex !== null && dayHistory[selectedHistoryIndex] && (
           <View style={[styles.dayInsightCard, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
-            <Text style={[styles.dayInsightTitle, { color: currentTheme.primary }]}>
-              📅 {dayHistory[selectedHistoryIndex].label} ({dayHistory[selectedHistoryIndex].date})
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <AppIcon name="calendar" size={14} color={currentTheme.primary} />
+              <Text style={[styles.dayInsightTitle, { color: currentTheme.primary }]}>
+                {dayHistory[selectedHistoryIndex].label} ({dayHistory[selectedHistoryIndex].date})
+              </Text>
+            </View>
             <Text style={styles.dayInsightBody}>
               Scrolled <Text style={[styles.highlightText, { color: currentTheme.primary }]}>{dayHistory[selectedHistoryIndex].count} shorts</Text> (≈ {Math.round(dayHistory[selectedHistoryIndex].count * 0.5)} mins).{' '}
               {dayHistory[selectedHistoryIndex].count <= dailyLimit
-                ? '🎯 Kept inside your healthy target!'
-                : `⚠️ Exceeded target by ${dayHistory[selectedHistoryIndex].count - dailyLimit} videos.`}
+                ? 'Kept inside your healthy target!'
+                : `Exceeded target by ${dayHistory[selectedHistoryIndex].count - dailyLimit} videos.`}
             </Text>
           </View>
         )}
 
         {/* Weekly Trend Summary */}
         <View style={[styles.weeklyRhythmSummaryRow, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-          <Text style={styles.weeklySummaryEmoji}>{mindfulStreak > 1 ? '🔥' : '🌱'}</Text>
+          <AppIcon name={mindfulStreak > 1 ? 'flame' : 'leaf'} size={24} color={currentTheme.primary} style={{ marginRight: 8 }} />
           <View style={styles.weeklySummaryCol}>
             <Text style={[styles.weeklySummaryTitle, { color: currentTheme.primary }]}>
               {mindfulStreak > 1 ? `${mindfulStreak}-Day Mindful Streak` : 'Fresh Weekly Rhythm'}
@@ -3084,6 +3575,9 @@ function App() {
     platformLimits,
     haloScale,
     haloOpacity,
+    simulatedHudSwipes,
+    morningReclaimedMins,
+    focusModeActive,
   ]);
   const renderCounterTab = () => memoizedCounterTab;
 
@@ -3270,7 +3764,7 @@ function App() {
                   {h.toString().padStart(2, '0')}
                 </Text>
                 <View style={[styles.hourlyBarIndicator, { backgroundColor: prof.color }]} />
-                <Text style={styles.hourlyBarEmoji}>{prof.icon}</Text>
+                <AppIcon name={prof.iconName} size={14} color={prof.color} style={{ marginTop: 2 }} />
               </Pressable>
             );
           })}
@@ -3279,7 +3773,7 @@ function App() {
         {/* Selected Hour Insight Card */}
         <View style={[styles.hourInsightBox, { backgroundColor: currentTheme.surfaceRaised, borderColor: selectedHourProfile.color }]}>
           <View style={styles.hourInsightHeader}>
-            <Text style={styles.hourInsightIcon}>{selectedHourProfile.icon}</Text>
+            <AppIcon name={selectedHourProfile.iconName} size={24} color={selectedHourProfile.color} style={{ marginRight: 10 }} />
             <View style={styles.hourInsightTitleCol}>
               <Text style={styles.hourInsightTimeRange}>
                 {selectedDopamineHour.toString().padStart(2, '0')}:00 –{' '}
@@ -3327,7 +3821,7 @@ function App() {
                   isSelected && [styles.triggerPillSelected, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }],
                 ]}
               >
-                <Text style={styles.triggerPillIcon}>{data.icon}</Text>
+                <AppIcon name={data.iconName} size={16} color={isSelected ? currentTheme.primary : currentTheme.subtext} />
                 <Text style={[styles.triggerPillLabel, isSelected && [styles.triggerPillLabelSelected, { color: currentTheme.primary }]]}>
                   {data.label}
                 </Text>
@@ -3341,9 +3835,12 @@ function App() {
 
         {/* Dynamic Behavioral Hack for Selected Trigger */}
         <View style={[styles.triggerAdviceCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.border }]}>
-          <Text style={[styles.triggerAdviceEyebrow, { color: currentTheme.primary }]}>
-            {TRIGGER_DATA[selectedTrigger].icon} NEURO-REPLACEMENT PROTOCOL
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <AppIcon name={TRIGGER_DATA[selectedTrigger].iconName} size={14} color={currentTheme.primary} />
+            <Text style={[styles.triggerAdviceEyebrow, { color: currentTheme.primary }]}>
+              NEURO-REPLACEMENT PROTOCOL
+            </Text>
+          </View>
           <Text style={styles.triggerAdviceBody}>{TRIGGER_DATA[selectedTrigger].advice}</Text>
         </View>
       </View>
@@ -3351,7 +3848,10 @@ function App() {
       {/* Life Reclaimed Beyond Screen Card */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>🌱 Life Beyond Feeds</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="leaf" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Life Beyond Feeds</Text>
+          </View>
           <Text style={[styles.cardSelectedHighlight, { color: currentTheme.primary }]}>~{timeSavedMins}m Saved</Text>
         </View>
         <Text style={styles.cardSubtitle}>
@@ -3359,22 +3859,22 @@ function App() {
         </Text>
         <View style={styles.lifeReclaimedGrid}>
           <View style={[styles.lifeReclaimedCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.lifeReclaimedIcon}>⏱️</Text>
+            <AppIcon name="timer" size={24} color={currentTheme.primary} style={{ marginBottom: 4 }} />
             <Text style={[styles.lifeReclaimedValue, { color: currentTheme.primary }]}>~{timeSavedMins}m</Text>
             <Text style={styles.lifeReclaimedLabel}>Time Reclaimed</Text>
           </View>
           <View style={[styles.lifeReclaimedCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.lifeReclaimedIcon}>📚</Text>
+            <AppIcon name="book" size={24} color={currentTheme.primary} style={{ marginBottom: 4 }} />
             <Text style={[styles.lifeReclaimedValue, { color: currentTheme.primary }]}>{bookPagesEquivalent} pgs</Text>
             <Text style={styles.lifeReclaimedLabel}>Book Reading Equiv</Text>
           </View>
           <View style={[styles.lifeReclaimedCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.lifeReclaimedIcon}>🚶</Text>
+            <AppIcon name="walk" size={24} color={currentTheme.primary} style={{ marginBottom: 4 }} />
             <Text style={[styles.lifeReclaimedValue, { color: currentTheme.primary }]}>{walkingStepsEquivalent}</Text>
             <Text style={styles.lifeReclaimedLabel}>Physical Steps Equiv</Text>
           </View>
           <View style={[styles.lifeReclaimedCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.lifeReclaimedIcon}>🧠</Text>
+            <AppIcon name="brain" size={24} color={currentTheme.primary} style={{ marginBottom: 4 }} />
             <Text style={[styles.lifeReclaimedValue, { color: currentTheme.primary }]}>Grounded</Text>
             <Text style={styles.lifeReclaimedLabel}>Dopamine State</Text>
           </View>
@@ -3384,7 +3884,10 @@ function App() {
       {/* Bedtime Wind-Down Shield */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>🌙 Bedtime Sleep Shield</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="moon" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Bedtime Sleep Shield</Text>
+          </View>
           <View style={[styles.statusBadgeSmall, bedtimeShield ? styles.badgeBlocked : styles.badgeNormal]}>
             <Text style={[styles.statusBadgeSmallText, bedtimeShield ? styles.textBlocked : styles.textNormal]}>
               {bedtimeShield ? 'SCHEDULED (11 PM)' : 'OFF'}
@@ -3397,7 +3900,7 @@ function App() {
             setBedtimeShield(next);
             PrototypeSettings.setBedtimeShield(next, 23, 6).catch(() => {});
             Alert.alert(
-              next ? 'Bedtime Shield Active 🌙' : 'Bedtime Shield Disabled',
+              next ? 'Bedtime Shield Active' : 'Bedtime Shield Disabled',
               next
                 ? 'Distracting feeds will be strictly blocked between 11:00 PM and 6:00 AM.'
                 : 'Nighttime automatic lock has been turned off.',
@@ -3570,9 +4073,14 @@ function App() {
       >
         <View style={styles.focusHeaderRow}>
           <Text style={[styles.focusHeroTitle, { color: currentTheme.primary }]}>DEEP WORK FOCUS SHIELD</Text>
-          <View style={[styles.focusLiveBadge, focusTimerRunning ? styles.focusLiveBadgeActive : styles.focusLiveBadgeIdle]}>
+          <View style={[styles.focusLiveBadge, focusTimerRunning ? styles.focusLiveBadgeActive : styles.focusLiveBadgeIdle, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+            <AppIcon
+              name={focusTimerRunning ? 'shield' : 'timer'}
+              size={11}
+              color={focusTimerRunning ? '#38d39f' : currentTheme.subtext}
+            />
             <Text style={[styles.focusLiveBadgeText, focusTimerRunning ? styles.focusLiveBadgeTextActive : styles.focusLiveBadgeTextIdle]}>
-              {focusTimerRunning ? '● SHIELD ACTIVE' : '○ IDLE'}
+              {focusTimerRunning ? 'SHIELD ACTIVE' : 'IDLE'}
             </Text>
           </View>
         </View>
@@ -3602,17 +4110,26 @@ function App() {
                   ],
                 ]}
               >
-                <Text
-                  style={[
-                    styles.presetBtnText,
-                    focusTimerSeconds === mins * 60 && [
-                      styles.presetBtnTextActive,
-                      { color: currentTheme.background },
-                    ],
-                  ]}
-                >
-                  {mins === 25 ? '🍅 25m' : `${mins}m`}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                  {mins === 25 && (
+                    <AppIcon
+                      name="timer"
+                      size={11}
+                      color={focusTimerSeconds === mins * 60 ? currentTheme.background : currentTheme.subtext}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.presetBtnText,
+                      focusTimerSeconds === mins * 60 && [
+                        styles.presetBtnTextActive,
+                        { color: currentTheme.background },
+                      ],
+                    ]}
+                  >
+                    {mins}m
+                  </Text>
+                </View>
               </Pressable>
             ))}
           </View>
@@ -3701,22 +4218,30 @@ function App() {
               : [styles.focusSoundscapeBtnIdle, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
           ]}
         >
-          <Text
-            style={[
-              styles.focusSoundscapeBtnText,
-              { color: soundscapePlaying ? currentTheme.background : currentTheme.primary },
-            ]}
-          >
-            {soundscapePlaying ? '⏸ Stop Audio' : '▶ Play Noise'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <AppIcon
+              name={soundscapePlaying ? 'pause' : 'play'}
+              size={13}
+              color={soundscapePlaying ? currentTheme.background : currentTheme.primary}
+            />
+            <Text
+              style={[
+                styles.focusSoundscapeBtnText,
+                { color: soundscapePlaying ? currentTheme.background : currentTheme.primary },
+              ]}
+            >
+              {soundscapePlaying ? 'Stop Audio' : 'Play Noise'}
+            </Text>
+          </View>
         </Pressable>
       </View>
 
       {/* Craving SOS / Urge Surfer Action Banner */}
       <View style={[styles.cravingSosBanner, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
         <View style={styles.cravingSosHeaderRow}>
-          <View style={[styles.cravingSosBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-            <Text style={[styles.cravingSosBadgeText, { color: currentTheme.primary }]}>⚡ CRAVING SOS</Text>
+          <View style={[styles.cravingSosBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+            <AppIcon name="bolt" size={11} color={currentTheme.primary} />
+            <Text style={[styles.cravingSosBadgeText, { color: currentTheme.primary }]}>CRAVING SOS</Text>
           </View>
           <Text style={[styles.cravingSosWaveTag, { color: currentTheme.subtext }]}>Impulse Interrupter</Text>
         </View>
@@ -3729,19 +4254,28 @@ function App() {
             onPress={() => openCravingModal('delay')}
             style={[styles.cravingSosPrimaryBtn, { backgroundColor: currentTheme.primary }]}
           >
-            <Text style={[styles.cravingSosPrimaryBtnText, { color: currentTheme.background }]}>🌊 90s Wave Surfer</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <AppIcon name="wave" size={13} color={currentTheme.background} />
+              <Text style={[styles.cravingSosPrimaryBtnText, { color: currentTheme.background }]}>90s Wave Surfer</Text>
+            </View>
           </Pressable>
           <Pressable
             onPress={() => openCravingModal('breathing')}
             style={[styles.cravingSosSecondaryBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
           >
-            <Text style={[styles.cravingSosSecondaryBtnText, { color: currentTheme.primary }]}>🧘 4-4-4 Box Breath</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <AppIcon name="zen" size={13} color={currentTheme.primary} />
+              <Text style={[styles.cravingSosSecondaryBtnText, { color: currentTheme.primary }]}>4-4-4 Box Breath</Text>
+            </View>
           </Pressable>
           <Pressable
             onPress={() => openCravingModal('grounding')}
             style={[styles.cravingSosSecondaryBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}
           >
-            <Text style={[styles.cravingSosSecondaryBtnText, { color: currentTheme.primary }]}>🌿 Grounding</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <AppIcon name="leaf" size={13} color={currentTheme.primary} />
+              <Text style={[styles.cravingSosSecondaryBtnText, { color: currentTheme.primary }]}>Grounding</Text>
+            </View>
           </Pressable>
         </View>
       </View>
@@ -3749,7 +4283,7 @@ function App() {
       {/* Mindful Intercept Gate - Neural Circuit Breaker */}
       <View style={[styles.interceptCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
         <View style={styles.interceptTopRow}>
-          <Text style={styles.interceptEmoji}>🧠</Text>
+          <AppIcon name="brain" size={28} color={currentTheme.primary} />
           <View style={styles.interceptTitleCol}>
             <Text style={[styles.interceptEyebrow, { color: currentTheme.primary }]}>NEURAL CIRCUIT BREAKER</Text>
             <Text style={styles.interceptTitle}>Mindful Intercept Gate</Text>
@@ -3765,14 +4299,255 @@ function App() {
           }}
           style={[styles.interceptActionBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
         >
-          <Text style={[styles.interceptActionBtnText, { color: currentTheme.actionText }]}>⚡ Challenge Urge with Stroop Test (+40 XP) →</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <AppIcon name="bolt" size={14} color={currentTheme.actionText} />
+            <Text style={[styles.interceptActionBtnText, { color: currentTheme.actionText }]}>Challenge Urge with Stroop Test (+40 XP) →</Text>
+          </View>
         </Pressable>
+      </View>
+
+      {/* IN-FEED NEURO-INTERVENTIONS (BREAK THE TRANCE IN REAL-TIME) */}
+      <View style={[styles.neuroCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
+        <View style={styles.neuroHeaderRow}>
+          <View style={[styles.neuroIconHalo, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+            <AppIcon name="brain" size={20} color={currentTheme.primary} />
+          </View>
+          <View style={styles.neuroTitleCol}>
+            <Text style={[styles.neuroEyebrow, { color: currentTheme.primary }]}>REAL-TIME TRANCE BREAKERS</Text>
+            <Text style={styles.neuroTitle}>In-Feed Neuro-Interventions</Text>
+          </View>
+        </View>
+        <Text style={styles.neuroDesc}>
+          Break hypnotic dopamine loops at the neurological level before mindless scrolling takes over.
+        </Text>
+
+        {/* 1. Grayscale Feed Filter on Overuse */}
+        <View style={[styles.neuroItemCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
+          <View style={styles.neuroItemTopRow}>
+            <View style={styles.neuroItemTitleRow}>
+              <AppIcon name="filter" size={17} color={currentTheme.primary} />
+              <Text style={styles.neuroItemTitle}>Grayscale Feed Filter</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                triggerDockHaptic();
+                const nextVal = !grayscaleFilterEnabled;
+                setGrayscaleFilterEnabled(nextVal);
+                PrototypeSettings.setGrayscaleFilter(nextVal, grayscaleTriggerMode).catch(() => {});
+              }}
+              style={[styles.switchTrack, grayscaleFilterEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            >
+              <View style={[styles.switchThumb, grayscaleFilterEnabled && styles.switchThumbOn]} />
+            </Pressable>
+          </View>
+          <Text style={styles.neuroItemDesc}>
+            Algorithms rely on ultra-saturated visual stimuli to trigger dopamine. Stripping color instantly cuts the hypnotic trance without needing an aggressive hard block.
+          </Text>
+          <View style={styles.neuroModeRow}>
+            {[
+              { id: 'overuse' as const, label: '80% Cap' },
+              { id: 'bedtime' as const, label: 'Night Time' },
+              { id: 'both' as const, label: 'Both (Recommended)' },
+            ].map(m => (
+              <Pressable
+                key={m.id}
+                onPress={() => {
+                  triggerDockHaptic();
+                  setGrayscaleTriggerMode(m.id);
+                  PrototypeSettings.setGrayscaleFilter(grayscaleFilterEnabled, m.id).catch(() => {});
+                }}
+                style={[
+                  styles.neuroModeChip,
+                  { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface },
+                  grayscaleTriggerMode === m.id && [
+                    styles.neuroModeChipActive,
+                    { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
+                  ],
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.neuroModeText,
+                    grayscaleTriggerMode === m.id && [styles.neuroModeTextActive, { color: currentTheme.primary }],
+                  ]}
+                >
+                  {m.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              Alert.alert(
+                'Grayscale Filter Activated',
+                'Simulating monochrome mode: Feed color desaturated to break hyper-saturated dopamine triggers.',
+              );
+            }}
+            style={[styles.neuroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
+          >
+            <Text style={[styles.neuroActionBtnText, { color: currentTheme.primary }]}>
+              Preview Monochrome Filter Effect
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* 2. Rapid "Fidget Swipe" Detector */}
+        <View style={[styles.neuroItemCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
+          <View style={styles.neuroItemTopRow}>
+            <View style={styles.neuroItemTitleRow}>
+              <AppIcon name="bolt" size={17} color={currentTheme.primary} />
+              <Text style={styles.neuroItemTitle}>Rapid Fidget Swipe Detector</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                triggerDockHaptic();
+                const nextVal = !fidgetSwipeEnabled;
+                setFidgetSwipeEnabled(nextVal);
+                PrototypeSettings.setFidgetSwipeDetector(nextVal).catch(() => {});
+              }}
+              style={[styles.switchTrack, fidgetSwipeEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            >
+              <View style={[styles.switchThumb, fidgetSwipeEnabled && styles.switchThumbOn]} />
+            </Pressable>
+          </View>
+          <Text style={styles.neuroItemDesc}>
+            If you swipe 4–5 reels in under 15 seconds without watching, you are in autonomic panic-swiping mode. Polly delivers a distinct double-buzz: "You're speed-swiping without watching. Take a 3-breath pause."
+          </Text>
+          <View style={styles.neuroStatRow}>
+            <View style={[styles.neuroStatBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+              <Text style={[styles.neuroStatBadgeText, { color: currentTheme.primary }]}>
+                {fidgetSwipeCount} SPEED-SWIPES INTERRUPTED TODAY
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              setFidgetSwipeCount(c => c + 1);
+              Alert.alert(
+                'Polly: Double-Buzz Triggered',
+                "You're speed-swiping without watching. Take a 3-breath pause.",
+              );
+            }}
+            style={[styles.neuroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
+          >
+            <Text style={[styles.neuroActionBtnText, { color: currentTheme.primary }]}>
+              Simulate Fidget Swipes (Test Double-Buzz)
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* 3. "One Last Reel" Conscious Exit Contract */}
+        <View style={[styles.neuroItemCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
+          <View style={styles.neuroItemTopRow}>
+            <View style={styles.neuroItemTitleRow}>
+              <AppIcon name="shield" size={17} color={currentTheme.primary} />
+              <Text style={styles.neuroItemTitle}>"One Last Reel" Conscious Exit</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                triggerDockHaptic();
+                const nextVal = !consciousExitEnabled;
+                setConsciousExitEnabled(nextVal);
+                PrototypeSettings.setConsciousExitEnabled(nextVal).catch(() => {});
+              }}
+              style={[styles.switchTrack, consciousExitEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            >
+              <View style={[styles.switchThumb, consciousExitEnabled && styles.switchThumbOn]} />
+            </Pressable>
+          </View>
+          <Text style={styles.neuroItemDesc}>
+            Abrupt blocking creates user frustration and leads people to disable accessibility services. When hitting the cap, offer a 60-second wind-down: "Finish this video mindfully, then place your phone face down."
+          </Text>
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              setShowConsciousExitModal(true);
+            }}
+            style={[styles.neuroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
+          >
+            <Text style={[styles.neuroActionBtnText, { color: currentTheme.primary }]}>
+              Test 60s Conscious Exit Contract
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* 4. Post-Session Reality Check (3-Second Micro-Log) */}
+        <View style={[styles.neuroItemCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
+          <View style={styles.neuroItemTopRow}>
+            <View style={styles.neuroItemTitleRow}>
+              <AppIcon name="sparkle" size={17} color={currentTheme.primary} />
+              <Text style={styles.neuroItemTitle}>Post-Session Reality Check</Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                triggerDockHaptic();
+                const nextVal = !realityCheckEnabled;
+                setRealityCheckEnabled(nextVal);
+                PrototypeSettings.setRealityCheckEnabled(nextVal).catch(() => {});
+              }}
+              style={[styles.switchTrack, realityCheckEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            >
+              <View style={[styles.switchThumb, realityCheckEnabled && styles.switchThumbOn]} />
+            </Pressable>
+          </View>
+          <Text style={styles.neuroItemDesc}>
+            When exiting Instagram/TikTok after a 15+ minute session, show a brief floating toast: "You spent 22 minutes. Did that feel nourishing or draining?" Single-tap thumb up / down builds metacognition over time.
+          </Text>
+
+          {/* Visual Ratio Bar */}
+          {(() => {
+            const totalLogs = nourishingCount + drainingCount;
+            const nourishRatio = totalLogs > 0 ? Math.round((nourishingCount / totalLogs) * 100) : 67;
+            const drainRatio = 100 - nourishRatio;
+            return (
+              <View style={styles.realityRatioBox}>
+                <View style={styles.realityRatioBar}>
+                  <View style={[styles.realityRatioNourishFill, { width: `${nourishRatio}%` }]} />
+                  <View style={[styles.realityRatioDrainFill, { width: `${drainRatio}%` }]} />
+                </View>
+                <View style={styles.realityRatioLabelRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <AppIcon name="thumb-up" size={12} color="#38d39f" />
+                    <Text style={styles.realityRatioNourishText}>{nourishRatio}% Nourishing ({nourishingCount})</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <AppIcon name="thumb-down" size={12} color="#fb7185" />
+                    <Text style={styles.realityRatioDrainText}>{drainRatio}% Draining ({drainingCount})</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          })()}
+
+          {/* Mascot Insight Message */}
+          <View style={[styles.realityInsightCard, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+            <Text style={[styles.realityInsightText, { color: currentTheme.primary }]}>
+              {nourishingCount >= drainingCount
+                ? "Polly's Metacognitive Insight: Most sessions this week felt nourishing. You are consuming with conscious intention!"
+                : "Polly's Metacognitive Insight: Notice when sessions turn draining. Try engaging the 15m Focus Sprint before opening feeds."}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              triggerDockHaptic();
+              setShowRealityCheckModal(true);
+            }}
+            style={[styles.neuroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
+          >
+            <Text style={[styles.neuroActionBtnText, { color: currentTheme.primary }]}>
+              Test Reality Check Prompt (Thumbs Up / Down)
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Chrono-Shield Vulnerability Analyzer */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.chronoHeaderRow}>
-          <Text style={styles.chronoIcon}>{chronoShield.icon}</Text>
+          <AppIcon name={chronoShield.iconName} size={24} color={chronoShield.badgeColor} />
           <View style={styles.chronoTitleWrap}>
             <View style={styles.chronoBadgeRow}>
               <Text style={[styles.chronoLevelBadge, { color: chronoShield.badgeColor }]}>
@@ -3821,7 +4596,7 @@ function App() {
         >
           <View style={styles.toggleInfo}>
             <View style={styles.masterTitleRow}>
-              <Text style={styles.masterToggleIcon}>🛡️</Text>
+              <AppIcon name="shield" size={18} color={currentTheme.primary} />
               <Text style={styles.masterToggleTitle}>Master Focus Mode</Text>
             </View>
             <Text style={styles.toggleSubtitle}>
@@ -3847,7 +4622,10 @@ function App() {
           style={styles.toggleRow}
         >
           <View style={styles.appLabelWithBadge}>
-            <Text style={styles.toggleTitle}>📸 Instagram Reels</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="camera" size={16} color={currentTheme.primary} />
+              <Text style={styles.toggleTitle}>Instagram Reels</Text>
+            </View>
             <View style={[styles.statusBadgeSmall, blockInstagram && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
               <Text style={[styles.statusBadgeSmallText, blockInstagram && focusModeActive ? styles.textBlocked : styles.textNormal]}>
                 {blockInstagram ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
@@ -3868,7 +4646,10 @@ function App() {
           style={styles.toggleRow}
         >
           <View style={styles.appLabelWithBadge}>
-            <Text style={styles.toggleTitle}>🎵 TikTok Feed</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="music" size={16} color={currentTheme.primary} />
+              <Text style={styles.toggleTitle}>TikTok Feed</Text>
+            </View>
             <View style={[styles.statusBadgeSmall, blockTikTok && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
               <Text style={[styles.statusBadgeSmallText, blockTikTok && focusModeActive ? styles.textBlocked : styles.textNormal]}>
                 {blockTikTok ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
@@ -3889,7 +4670,10 @@ function App() {
           style={styles.toggleRow}
         >
           <View style={styles.appLabelWithBadge}>
-            <Text style={styles.toggleTitle}>▶️ YouTube Shorts</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="play" size={16} color={currentTheme.primary} />
+              <Text style={styles.toggleTitle}>YouTube Shorts</Text>
+            </View>
             <View style={[styles.statusBadgeSmall, blockYouTube && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
               <Text style={[styles.statusBadgeSmallText, blockYouTube && focusModeActive ? styles.textBlocked : styles.textNormal]}>
                 {blockYouTube ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
@@ -3910,7 +4694,10 @@ function App() {
           style={styles.toggleRow}
         >
           <View style={styles.appLabelWithBadge}>
-            <Text style={styles.toggleTitle}>👻 Snapchat Spotlight</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AppIcon name="ghost" size={16} color={currentTheme.primary} />
+              <Text style={styles.toggleTitle}>Snapchat Spotlight</Text>
+            </View>
             <View style={[styles.statusBadgeSmall, blockSnapchat && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
               <Text style={[styles.statusBadgeSmallText, blockSnapchat && focusModeActive ? styles.textBlocked : styles.textNormal]}>
                 {blockSnapchat ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
@@ -3930,7 +4717,10 @@ function App() {
       {/* 24-Hour Dopamine Sabbath */}
       <View style={[styles.sectionCard, dopamineFastActive && styles.sabbathCardActive]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>🧘 24-Hour Digital Sabbath</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="zen" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>24-Hour Digital Sabbath</Text>
+          </View>
           <View style={[styles.statusBadgeSmall, dopamineFastActive ? styles.badgeBlocked : styles.badgeNormal]}>
             <Text style={[styles.statusBadgeSmallText, dopamineFastActive ? styles.textBlocked : styles.textNormal]}>
               {dopamineFastActive ? 'FAST ACTIVE' : 'READY'}
@@ -3951,7 +4741,7 @@ function App() {
               setFocusTimerRunning(true);
               setFocusModeActive(true);
               Alert.alert(
-                '24-Hour Digital Sabbath Begun! 🧘',
+                '24-Hour Digital Sabbath Begun!',
                 'All monitored feeds are strictly locked until tomorrow. Reclaim your stillness.',
               );
             } else {
@@ -3963,9 +4753,16 @@ function App() {
           }}
           style={[styles.sabbathBtn, dopamineFastActive && styles.sabbathBtnActive]}
         >
-          <Text style={[styles.sabbathBtnText, dopamineFastActive && styles.sabbathBtnTextActive]}>
-            {dopamineFastActive ? 'End 24-Hour Fast' : 'Begin 24-Hour Dopamine Fast 🌿'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <AppIcon
+              name={dopamineFastActive ? 'check' : 'leaf'}
+              size={14}
+              color={dopamineFastActive ? currentTheme.subtext : currentTheme.background}
+            />
+            <Text style={[styles.sabbathBtnText, dopamineFastActive && styles.sabbathBtnTextActive]}>
+              {dopamineFastActive ? 'End 24-Hour Fast' : 'Begin 24-Hour Dopamine Fast'}
+            </Text>
+          </View>
         </Pressable>
       </View>
 
@@ -4011,7 +4808,11 @@ function App() {
                 ],
               ]}
             >
-              <Text style={styles.soundscapeIcon}>{sItem.icon}</Text>
+              <AppIcon
+                name={sItem.iconName}
+                size={22}
+                color={soundscape === sItem.id ? currentTheme.primary : currentTheme.subtext}
+              />
               <Text
                 style={[
                   styles.soundscapeName,
@@ -4144,9 +4945,16 @@ function App() {
             }}
             style={[styles.soundscapePlayToggleBtn, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}
           >
-            <Text style={[styles.soundscapePlayToggleText, { color: currentTheme.primary }]}>
-              {soundscapePlaying ? '⏸ Pause' : '▶ Play'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <AppIcon
+                name={soundscapePlaying ? 'pause' : 'play'}
+                size={13}
+                color={currentTheme.primary}
+              />
+              <Text style={[styles.soundscapePlayToggleText, { color: currentTheme.primary }]}>
+                {soundscapePlaying ? 'Pause' : 'Play'}
+              </Text>
+            </View>
           </Pressable>
         </View>
       </View>
@@ -4175,6 +4983,14 @@ function App() {
     handleToggleFocusSession,
     toggleSoundscapeAudio,
     eqPulseAnim,
+    grayscaleFilterEnabled,
+    grayscaleTriggerMode,
+    fidgetSwipeEnabled,
+    fidgetSwipeCount,
+    consciousExitEnabled,
+    realityCheckEnabled,
+    nourishingCount,
+    drainingCount,
   ]);
   const renderBlockTab = () => memoizedBlockTab;
 
@@ -4198,7 +5014,7 @@ function App() {
       <View style={[styles.masteryCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
         <View style={styles.masteryTopRow}>
           <View style={styles.masteryBadgeRow}>
-            <Text style={styles.masteryLevelIcon}>{zenLevel.icon}</Text>
+            <AppIcon name={zenLevel.iconName} size={28} color={currentTheme.primary} />
             <View>
               <Text style={[styles.masteryEyebrow, { color: currentTheme.primary }]}>ATTENTION MASTERY · LEVEL {zenLevel.level}</Text>
               <Text style={styles.masteryTitle}>{zenLevel.title}</Text>
@@ -4228,12 +5044,18 @@ function App() {
               if (!dailyQuestsClaimed.compass) {
                 setDailyQuestsClaimed(prev => ({ ...prev, compass: true }));
                 setZenXp(prev => prev + 20);
-                Alert.alert('Quest Complete! 🎯', '+20 XP added for setting your daily intention compass.');
+                Alert.alert('Quest Complete!', '+20 XP added for setting your daily intention compass.');
               }
             }}
             style={[styles.questItem, dailyQuestsClaimed.compass && styles.questItemDone]}
           >
-            <Text style={styles.questIcon}>{dailyQuestsClaimed.compass ? '✓' : '🎯'}</Text>
+            <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon
+                name={dailyQuestsClaimed.compass ? 'check' : 'target'}
+                size={18}
+                color={dailyQuestsClaimed.compass ? '#38d39f' : currentTheme.primary}
+              />
+            </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Daily Compass</Text>
               <Text style={styles.questReward}>+20 XP · Intent Set</Text>
@@ -4244,7 +5066,13 @@ function App() {
             onPress={() => openCravingModal('stroop')}
             style={[styles.questItem, dailyQuestsClaimed.reset && styles.questItemDone]}
           >
-            <Text style={styles.questIcon}>{dailyQuestsClaimed.reset ? '✓' : '🧠'}</Text>
+            <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon
+                name={dailyQuestsClaimed.reset ? 'check' : 'brain'}
+                size={18}
+                color={dailyQuestsClaimed.reset ? '#38d39f' : currentTheme.primary}
+              />
+            </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Stroop Reset</Text>
               <Text style={styles.questReward}>+40 XP · Tap to Play</Text>
@@ -4255,7 +5083,13 @@ function App() {
             onPress={handleQuickFocus15m}
             style={[styles.questItem, (focusTimerRunning || dailyQuestsClaimed.shield) && styles.questItemDone]}
           >
-            <Text style={styles.questIcon}>{focusTimerRunning || dailyQuestsClaimed.shield ? '✓' : '🛡️'}</Text>
+            <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon
+                name={focusTimerRunning || dailyQuestsClaimed.shield ? 'check' : 'shield'}
+                size={18}
+                color={focusTimerRunning || dailyQuestsClaimed.shield ? '#38d39f' : currentTheme.primary}
+              />
+            </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Focus Shield</Text>
               <Text style={styles.questReward}>+50 XP · 15m Sprint</Text>
@@ -4263,7 +5097,13 @@ function App() {
           </Pressable>
 
           <View style={[styles.questItem, totalShorts <= dailyLimit && styles.questItemDone]}>
-            <Text style={styles.questIcon}>{totalShorts <= dailyLimit ? '✓' : '📉'}</Text>
+            <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon
+                name={totalShorts <= dailyLimit ? 'check' : 'chart'}
+                size={18}
+                color={totalShorts <= dailyLimit ? '#38d39f' : currentTheme.primary}
+              />
+            </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Stay Under Cap</Text>
               <Text style={styles.questReward}>+100 XP · At Midnight</Text>
@@ -4282,10 +5122,10 @@ function App() {
           </View>
           <Text style={styles.vitalityStatusText}>
             {vitalityScore >= 85
-              ? '🌟 Optimal Flow — High clarity & minimal reflex distraction'
+              ? 'Optimal Flow — High clarity & minimal reflex distraction'
               : vitalityScore >= 65
-              ? '🌱 Healthy Balance — Good awareness; keep under daily cap'
-              : '⚡ High Dopamine Drag — Engage Craving SOS to reset'}
+              ? 'Healthy Balance — Good awareness; keep under daily cap'
+              : 'High Dopamine Drag — Engage Craving SOS to reset'}
           </Text>
         </View>
         <View style={styles.vitalityRingWrap}>
@@ -4299,9 +5139,11 @@ function App() {
                 : styles.vitalityRingLow,
             ]}
           >
-            <Text style={styles.vitalityRingIcon}>
-              {vitalityScore >= 85 ? '✨' : vitalityScore >= 65 ? '🌿' : '⚡'}
-            </Text>
+            <AppIcon
+              name={vitalityScore >= 85 ? 'sparkle' : vitalityScore >= 65 ? 'leaf' : 'bolt'}
+              size={22}
+              color={vitalityScore >= 85 ? '#38d39f' : vitalityScore >= 65 ? '#22d3ee' : '#fbbf24'}
+            />
           </View>
         </View>
       </View>
@@ -4330,7 +5172,11 @@ function App() {
                 ],
               ]}
             >
-              <Text style={styles.intentionPillIcon}>{item.icon}</Text>
+              <AppIcon
+                name={item.iconName}
+                size={15}
+                color={selectedIntention === item.title ? currentTheme.primary : currentTheme.subtext}
+              />
               <Text
                 style={[
                   styles.intentionPillText,
@@ -4350,7 +5196,10 @@ function App() {
       {/* Daily Reflection & Mind Check-In */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>🧠 Attention & Mood Check-In</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="brain" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Attention & Mood Check-In</Text>
+          </View>
           <Text style={[styles.cardSelectedHighlight, { color: currentTheme.primary }]}>
             {todayMood ? moodsList.find(m => m.id === todayMood)?.label : 'Log Feeling'}
           </Text>
@@ -4371,7 +5220,11 @@ function App() {
                 todayMood === moodItem.id && styles.moodCardSelected,
               ]}
             >
-              <Text style={styles.moodIcon}>{moodItem.icon}</Text>
+              <AppIcon
+                name={moodItem.iconName}
+                size={22}
+                color={todayMood === moodItem.id ? currentTheme.primary : currentTheme.subtext}
+              />
               <Text
                 style={[
                   styles.moodLabel,
@@ -4384,9 +5237,10 @@ function App() {
           ))}
         </View>
         {todayMood && (
-          <View style={styles.moodTipBox}>
+          <View style={[styles.moodTipBox, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <AppIcon name="info" size={14} color={currentTheme.primary} />
             <Text style={styles.moodTipText}>
-              💡 {moodsList.find(m => m.id === todayMood)?.tip}
+              {moodsList.find(m => m.id === todayMood)?.tip}
             </Text>
           </View>
         )}
@@ -4395,7 +5249,10 @@ function App() {
       {/* Mindful Milestones & Badges */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>🏆 Mindful Milestones</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="trophy" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Mindful Milestones</Text>
+          </View>
           <Text style={[styles.cardSelectedHighlight, { color: currentTheme.primary }]}>
             {milestones.filter(m => m.unlocked).length} of 4 Unlocked
           </Text>
@@ -4416,7 +5273,11 @@ function App() {
                 ],
               ]}
             >
-              <Text style={styles.milestoneIcon}>{badge.icon}</Text>
+              <AppIcon
+                name={badge.iconName}
+                size={24}
+                color={badge.unlocked ? currentTheme.primary : currentTheme.subtext}
+              />
               <Text
                 style={[
                   styles.milestoneName,
@@ -4432,8 +5293,14 @@ function App() {
                   badge.unlocked
                     ? [styles.milestoneStatusTagUnlocked, { backgroundColor: currentTheme.glow }]
                     : styles.milestoneStatusTagLocked,
+                  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                 ]}
               >
+                <AppIcon
+                  name={badge.unlocked ? 'check' : 'lock'}
+                  size={10}
+                  color={badge.unlocked ? currentTheme.primary : currentTheme.subtext}
+                />
                 <Text
                   style={[
                     styles.milestoneStatusText,
@@ -4442,7 +5309,7 @@ function App() {
                       : styles.milestoneStatusTextLocked,
                   ]}
                 >
-                  {badge.unlocked ? '✓ UNLOCKED' : '🔒 LOCKED'}
+                  {badge.unlocked ? 'UNLOCKED' : 'LOCKED'}
                 </Text>
               </View>
             </View>
@@ -4478,7 +5345,13 @@ function App() {
         {/* Permissions Checklist */}
         <View style={styles.healthList}>
           <View style={[styles.healthItem, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.healthIcon}>{prototypeStatus.serviceConnected ? '✅' : '⚠️'}</Text>
+            <View style={{ width: 22, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon
+                name={prototypeStatus.serviceConnected ? 'check' : 'alert'}
+                size={18}
+                color={prototypeStatus.serviceConnected ? '#38d39f' : '#fbbf24'}
+              />
+            </View>
             <View style={styles.healthInfo}>
               <Text style={styles.healthTitle}>Accessibility Tracking Service</Text>
               <Text style={styles.healthDesc}>
@@ -4489,14 +5362,18 @@ function App() {
             </View>
           </View>
           <View style={[styles.healthItem, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.healthIcon}>✅</Text>
+            <View style={{ width: 22, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon name="check" size={18} color="#38d39f" />
+            </View>
             <View style={styles.healthInfo}>
               <Text style={styles.healthTitle}>Floating Screen Overlay (HUD)</Text>
               <Text style={styles.healthDesc}>TYPE_ACCESSIBILITY_OVERLAY enabled for draggable pill.</Text>
             </View>
           </View>
           <View style={[styles.healthItem, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
-            <Text style={styles.healthIcon}>✅</Text>
+            <View style={{ width: 22, alignItems: 'center', justifyContent: 'center' }}>
+              <AppIcon name="check" size={18} color="#38d39f" />
+            </View>
             <View style={styles.healthInfo}>
               <Text style={styles.healthTitle}>Local Device Storage</Text>
               <Text style={styles.healthDesc}>Volatile SharedPreferences storage active (offline).</Text>
@@ -4525,9 +5402,9 @@ function App() {
         </Text>
         <View style={styles.hudStyleSelectorRow}>
           {[
-            { id: 'pill' as HudStyle, label: 'Pill', icon: '🎬 14', desc: 'Badge with count' },
-            { id: 'dot' as HudStyle, label: 'Compact', icon: '● 14', desc: 'Minimal dot' },
-            { id: 'warning_only' as HudStyle, label: 'Stealth', icon: '⚠️ Only', desc: 'Only at limit' },
+            { id: 'pill' as HudStyle, label: 'Pill', iconName: 'reels' as IconName, countLabel: '14', desc: 'Badge with count' },
+            { id: 'dot' as HudStyle, label: 'Compact', iconName: 'dot' as IconName, countLabel: '14', desc: 'Minimal dot' },
+            { id: 'warning_only' as HudStyle, label: 'Stealth', iconName: 'alert' as IconName, countLabel: 'Only', desc: 'Only at limit' },
           ].map(styleOpt => (
             <Pressable
               key={styleOpt.id}
@@ -4545,7 +5422,16 @@ function App() {
                 ],
               ]}
             >
-              <Text style={styles.hudStyleIcon}>{styleOpt.icon}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 }}>
+                <AppIcon
+                  name={styleOpt.iconName}
+                  size={14}
+                  color={hudStyle === styleOpt.id ? currentTheme.primary : currentTheme.subtext}
+                />
+                <Text style={[styles.hudStyleIcon, hudStyle === styleOpt.id && { color: currentTheme.primary }]}>
+                  {styleOpt.countLabel}
+                </Text>
+              </View>
               <Text
                 style={[
                   styles.hudStyleLabel,
@@ -4566,7 +5452,7 @@ function App() {
       {/* Floating HUD info */}
       <View style={[styles.tipCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
         <View style={styles.tipHeaderRow}>
-          <Text style={styles.tipTitleIcon}>💡</Text>
+          <AppIcon name="info" size={18} color={currentTheme.primary} />
           <Text style={[styles.tipTitle, { color: currentTheme.primary }]}>Live On-Screen Overlay HUD</Text>
         </View>
         <Text style={styles.tipText}>
@@ -4581,8 +5467,9 @@ function App() {
             <AppIcon name="palette" size={19} color={currentTheme.primary} />
             <Text style={styles.cardSectionTitle}>Sanctuary Atmosphere</Text>
           </View>
-          <View style={[styles.activeThemeBadgePill, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
-            <Text style={[styles.activeThemeBadgeText, { color: currentTheme.primary }]}>{currentTheme.previewBadge} {currentTheme.name}</Text>
+          <View style={[styles.activeThemeBadgePill, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow, flexDirection: 'row', alignItems: 'center', gap: 5 }]}>
+            <AppIcon name={currentTheme.iconName} size={13} color={currentTheme.primary} />
+            <Text style={[styles.activeThemeBadgeText, { color: currentTheme.primary }]}>{currentTheme.name}</Text>
           </View>
         </View>
         <Text style={styles.cardSubtitle}>
@@ -4638,8 +5525,10 @@ function App() {
                     isSelected
                       ? [styles.themeCardStatusPillSelected, { backgroundColor: t.glow, borderColor: t.border }]
                       : styles.themeCardStatusPillIdle,
+                    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                   ]}
                 >
+                  {isSelected && <AppIcon name="check" size={11} color={t.primary} />}
                   <Text
                     style={[
                       styles.themeCardStatusText,
@@ -4648,7 +5537,7 @@ function App() {
                         : styles.themeCardStatusTextIdle,
                     ]}
                   >
-                    {isSelected ? '✓ Active Theme' : 'Tap to Activate'}
+                    {isSelected ? 'Active Theme' : 'Tap to Activate'}
                   </Text>
                 </View>
               </Pressable>
@@ -4660,7 +5549,7 @@ function App() {
       {/* Privacy Guarantee */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.privacyHeaderRow}>
-          <Text style={styles.privacyShieldIcon}>🛡️</Text>
+          <AppIcon name="shield" size={18} color={currentTheme.primary} />
           <Text style={styles.cardSectionTitle}>On-Device Privacy Commitment</Text>
         </View>
         <Text style={styles.body}>
@@ -4677,7 +5566,10 @@ function App() {
       {/* Share Progress Card */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.cardHeaderWithAction}>
-          <Text style={styles.cardSectionTitle}>📤 Share Progress & Milestones</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AppIcon name="share" size={18} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>Share Progress & Milestones</Text>
+          </View>
           <Text style={[styles.cardSelectedHighlight, { color: currentTheme.primary }]}>{mindfulStreak}d Streak</Text>
         </View>
         <Text style={styles.cardSubtitle}>
@@ -4723,7 +5615,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.28</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.30</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -4807,11 +5699,14 @@ function App() {
                   ]}
                 >
                   <View style={styles.dockQuickActionHeader}>
-                    <Text style={[styles.dockQuickActionTitle, { color: currentTheme.primary }]}>
-                      ⚡ {TABS[quickActionTab].label} Quick Shortcuts
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <AppIcon name="bolt" size={14} color={currentTheme.primary} />
+                      <Text style={[styles.dockQuickActionTitle, { color: currentTheme.primary }]}>
+                        {TABS[quickActionTab].label} Quick Shortcuts
+                      </Text>
+                    </View>
                     <Pressable onPress={closeQuickActions} style={styles.dockQuickActionCloseBtn}>
-                      <Text style={styles.dockQuickActionCloseText}>✕</Text>
+                      <AppIcon name="close" size={12} color={currentTheme.subtext} />
                     </Pressable>
                   </View>
                   <View style={styles.dockQuickActionRow}>
@@ -4823,8 +5718,9 @@ function App() {
                           act.action();
                           closeQuickActions();
                         }}
-                        style={[styles.dockQuickActionBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.glow }]}
+                        style={[styles.dockQuickActionBtn, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.glow, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}
                       >
+                        <AppIcon name={act.icon} size={12} color={currentTheme.primary} />
                         <Text style={[styles.dockQuickActionBtnText, { color: currentTheme.primary }]}>
                           {act.label}
                         </Text>
@@ -5027,12 +5923,18 @@ function App() {
                       onTouchStart={() => {
                         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                         longPressTimerRef.current = setTimeout(() => {
-                          openQuickActions(idx);
+                          // Only open quick actions if user hasn't started scrubbing/swiping
+                          if (!hasScrubbedRef.current && !isDragActiveRef.current) {
+                            openQuickActions(idx);
+                          }
                         }, 450);
                       }}
                       onTouchEnd={() => {
                         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                        animateTabSelection(idx);
+                        // Don't switch tabs if we were scrubbing — PanResponder handles that
+                        if (!hasScrubbedRef.current) {
+                          animateTabSelection(idx);
+                        }
                       }}
                       onTouchCancel={() => {
                         if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -5213,15 +6115,21 @@ function App() {
                   style={[
                     styles.modalTabBtn,
                     cravingTab === 'breathing' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+                    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                   ]}
                 >
+                  <AppIcon
+                    name="zen"
+                    size={13}
+                    color={cravingTab === 'breathing' ? currentTheme.primary : currentTheme.subtext}
+                  />
                   <Text
                     style={[
                       styles.modalTabBtnText,
                       cravingTab === 'breathing' && [styles.modalTabBtnTextActive, { color: currentTheme.primary }],
                     ]}
                   >
-                    🧘 Breath
+                    Breath
                   </Text>
                 </Pressable>
                 <Pressable
@@ -5232,15 +6140,21 @@ function App() {
                   style={[
                     styles.modalTabBtn,
                     cravingTab === 'delay' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border, borderWidth: 1 }],
+                    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                   ]}
                 >
+                  <AppIcon
+                    name="wave"
+                    size={13}
+                    color={cravingTab === 'delay' ? currentTheme.primary : currentTheme.subtext}
+                  />
                   <Text
                     style={[
                       styles.modalTabBtnText,
                       cravingTab === 'delay' && [styles.modalTabBtnTextActive, { color: currentTheme.primary }],
                     ]}
                   >
-                    🌊 90s Delay
+                    90s Delay
                   </Text>
                 </Pressable>
                 <Pressable
@@ -5251,15 +6165,21 @@ function App() {
                   style={[
                     styles.modalTabBtn,
                     cravingTab === 'grounding' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border, borderWidth: 1 }],
+                    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                   ]}
                 >
+                  <AppIcon
+                    name="leaf"
+                    size={13}
+                    color={cravingTab === 'grounding' ? currentTheme.primary : currentTheme.subtext}
+                  />
                   <Text
                     style={[
                       styles.modalTabBtnText,
                       cravingTab === 'grounding' && [styles.modalTabBtnTextActive, { color: currentTheme.primary }],
                     ]}
                   >
-                    🌿 Grounding
+                    Grounding
                   </Text>
                 </Pressable>
                 <Pressable
@@ -5271,15 +6191,21 @@ function App() {
                   style={[
                     styles.modalTabBtn,
                     cravingTab === 'stroop' && [styles.modalTabBtnActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border, borderWidth: 1 }],
+                    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
                   ]}
                 >
+                  <AppIcon
+                    name="brain"
+                    size={13}
+                    color={cravingTab === 'stroop' ? currentTheme.primary : currentTheme.subtext}
+                  />
                   <Text
                     style={[
                       styles.modalTabBtnText,
                       cravingTab === 'stroop' && [styles.modalTabBtnTextActive, { color: currentTheme.primary }],
                     ]}
                   >
-                    🧠 Stroop
+                    Stroop
                   </Text>
                 </Pressable>
               </View>
@@ -5326,10 +6252,10 @@ function App() {
                   </View>
                   <Text style={styles.delayStageText}>
                     {delaySeconds > 60
-                      ? '🌊 Urge Rising: Observe the itch without judgment.'
+                      ? 'Urge Rising: Observe the itch without judgment.'
                       : delaySeconds > 30
-                      ? '⚡ Wave Cresting: The dopamine spike is leveling off.'
-                      : '🌿 Wave Subsiding: Impulse fading, prefrontal cortex in control.'}
+                      ? 'Wave Cresting: The dopamine spike is leveling off.'
+                      : 'Wave Subsiding: Impulse fading, prefrontal cortex in control.'}
                   </Text>
                   <View style={styles.delayActionBtnRow}>
                     <Pressable
@@ -5343,9 +6269,16 @@ function App() {
                         delayRunning && styles.delayActionBtnActive,
                       ]}
                     >
-                      <Text style={[styles.delayActionBtnText, { color: currentTheme.background }]}>
-                        {delayRunning ? '⏸️ Pause Timer' : '▶️ Surf the Wave (90s)'}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <AppIcon
+                          name={delayRunning ? 'pause' : 'play'}
+                          size={14}
+                          color={currentTheme.background}
+                        />
+                        <Text style={[styles.delayActionBtnText, { color: currentTheme.background }]}>
+                          {delayRunning ? 'Pause Timer' : 'Surf the Wave (90s)'}
+                        </Text>
+                      </View>
                     </Pressable>
                     <Pressable
                       onPress={() => {
@@ -5366,9 +6299,16 @@ function App() {
                 <View style={styles.cravingContentWrap}>
                   <View style={[styles.groundingCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
                     <View style={styles.groundingBadgeRow}>
-                      <Text style={[styles.groundingSenseTag, { color: currentTheme.primary }]}>
-                        {groundingSteps[groundingStep].sense}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <AppIcon
+                          name={groundingSteps[groundingStep].iconName}
+                          size={13}
+                          color={currentTheme.primary}
+                        />
+                        <Text style={[styles.groundingSenseTag, { color: currentTheme.primary }]}>
+                          {groundingSteps[groundingStep].sense}
+                        </Text>
+                      </View>
                       <Text style={styles.groundingStepCount}>
                         Step {groundingStep + 1} of 5
                       </Text>
@@ -5388,13 +6328,13 @@ function App() {
                       } else {
                         setGroundingStep(0);
                         setShowCravingModal(false);
-                        Alert.alert('Grounding Complete 🌿', 'Your senses are anchored and mind is clear.');
+                        Alert.alert('Grounding Complete', 'Your senses are anchored and mind is clear.');
                       }
                     }}
                     style={[styles.groundingNextBtn, { backgroundColor: currentTheme.primary }]}
                   >
                     <Text style={[styles.groundingNextBtnText, { color: currentTheme.background }]}>
-                      {groundingStep < 4 ? 'Next Sensory Anchor →' : 'Complete Grounding Session ✓'}
+                      {groundingStep < 4 ? 'Next Sensory Anchor →' : 'Complete Grounding Session'}
                     </Text>
                   </Pressable>
                 </View>
@@ -5460,7 +6400,9 @@ function App() {
                     </>
                   ) : (
                     <View style={styles.stroopSuccessCard}>
-                      <Text style={styles.stroopSuccessIcon}>🧠✨</Text>
+                      <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                        <AppIcon name="brain" size={44} color={currentTheme.primary} />
+                      </View>
                       <Text style={styles.stroopSuccessTitle}>Prefrontal Cortex Restored!</Text>
                       <Text style={styles.stroopSuccessDesc}>
                         The color-word conflict forced your executive brain to override the basal-ganglia autonomic dopamine loop.
@@ -5475,7 +6417,10 @@ function App() {
                         }}
                         style={styles.stroopCompleteBtn}
                       >
-                        <Text style={styles.stroopCompleteBtnText}>Conscious Awareness Restored ✓</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          <AppIcon name="check" size={14} color={currentTheme.background} />
+                          <Text style={styles.stroopCompleteBtnText}>Conscious Awareness Restored</Text>
+                        </View>
                       </Pressable>
                     </View>
                   )}
@@ -5496,6 +6441,186 @@ function App() {
               </Pressable>
             </View>
           </View>
+        </Modal>
+
+        {/* Polly's Morning Alignment 5-Second Daily Card Modal */}
+        <Modal
+          visible={showMorningAlignment}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowMorningAlignment(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowMorningAlignment(false)}
+          >
+            <Pressable style={[styles.morningCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]} onPress={e => e.stopPropagation()}>
+              <View style={[styles.morningAvatarHero, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                <Image
+                  source={require('./src/assets/images/app_mascot.jpg')}
+                  style={styles.morningAvatarImg}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <View style={[styles.morningBadgePill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                <AppIcon name="sun" size={13} color={currentTheme.primary} />
+                <Text style={[styles.morningBadgePillText, { color: currentTheme.primary }]}>POLLY'S MORNING ALIGNMENT</Text>
+              </View>
+
+              <Text style={styles.morningTitle}>Good morning!</Text>
+              <Text style={[styles.morningHighlight, { color: currentTheme.primary }]}>
+                Yesterday you reclaimed {morningReclaimedMins} minutes beyond feeds.
+              </Text>
+              <Text style={styles.morningDesc}>
+                Let's keep your morning screen-free, nourish your real world, and start with intention.
+              </Text>
+
+              {/* 5-Second Animated Progress Bar */}
+              <View style={styles.morningProgressWrap}>
+                <View style={styles.morningProgressBarTrack}>
+                  <View style={[styles.morningProgressBarFill, { width: `${(morningCountdown / 5) * 100}%`, backgroundColor: currentTheme.primary }]} />
+                </View>
+                <Text style={styles.morningCountdownText}>Auto-dismissing in {morningCountdown}s</Text>
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  triggerDockHaptic();
+                  setShowMorningAlignment(false);
+                }}
+                style={[styles.morningActionBtn, { backgroundColor: currentTheme.primary }]}
+              >
+                <Text style={[styles.morningActionBtnText, { color: currentTheme.background }]}>
+                  Keep Morning Screen-Free →
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Post-Session Reality Check (3-Second Micro-Log) Modal */}
+        <Modal
+          visible={showRealityCheckModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowRealityCheckModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowRealityCheckModal(false)}
+          >
+            <Pressable style={[styles.realityCheckModalCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]} onPress={e => e.stopPropagation()}>
+              <View style={styles.realityModalHeaderRow}>
+                <View style={[styles.realityModalAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
+                  <Image
+                    source={require('./src/assets/images/app_mascot.jpg')}
+                    style={styles.realityModalAvatarImg}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.realityModalEyebrow, { color: currentTheme.primary }]}>POLLY · REALITY CHECK</Text>
+                  <Text style={styles.realityModalTitle}>Session Reflection</Text>
+                </View>
+              </View>
+
+              <Text style={styles.realityModalQuestion}>
+                You spent {realityCheckElapsedMins} minutes on {realityCheckApp}.{'\n'}Did that feel nourishing or draining?
+              </Text>
+
+              <View style={styles.realityBtnRow}>
+                <Pressable
+                  onPress={() => {
+                    triggerDockHaptic();
+                    setNourishingCount(c => c + 1);
+                    PrototypeSettings.recordMicroLog(realityCheckApp, realityCheckElapsedMins, 'nourishing').catch(() => {});
+                    setShowRealityCheckModal(false);
+                    Alert.alert('Polly: Session Logged', 'Logged as Nourishing. Metacognition +10 XP!');
+                  }}
+                  style={[styles.realityBtnNourish, { backgroundColor: 'rgba(56, 211, 159, 0.15)', borderColor: '#38d39f' }]}
+                >
+                  <AppIcon name="thumb-up" size={18} color="#38d39f" />
+                  <Text style={[styles.realityBtnText, { color: '#38d39f' }]}>Nourishing</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    triggerDockHaptic();
+                    setDrainingCount(c => c + 1);
+                    PrototypeSettings.recordMicroLog(realityCheckApp, realityCheckElapsedMins, 'draining').catch(() => {});
+                    setShowRealityCheckModal(false);
+                    Alert.alert('Polly: Session Logged', 'Logged as Draining. A reminder to pause sooner next time.');
+                  }}
+                  style={[styles.realityBtnDrain, { backgroundColor: 'rgba(251, 113, 133, 0.15)', borderColor: '#fb7185' }]}
+                >
+                  <AppIcon name="thumb-down" size={18} color="#fb7185" />
+                  <Text style={[styles.realityBtnText, { color: '#fb7185' }]}>Draining</Text>
+                </Pressable>
+              </View>
+
+              <Pressable
+                onPress={() => setShowRealityCheckModal(false)}
+                style={styles.realityModalDismissBtn}
+              >
+                <Text style={styles.realityModalDismissText}>Dismiss</Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* "One Last Reel" Conscious Exit Contract Modal */}
+        <Modal
+          visible={showConsciousExitModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowConsciousExitModal(false)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setShowConsciousExitModal(false)}
+          >
+            <Pressable style={[styles.consciousExitModalCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]} onPress={e => e.stopPropagation()}>
+              <View style={[styles.consciousExitAvatarWrap, { borderColor: '#fb7185', backgroundColor: 'rgba(251, 113, 133, 0.15)' }]}>
+                <Image
+                  source={require('./src/assets/images/app_mascot.jpg')}
+                  style={styles.consciousExitAvatarImg}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <Text style={[styles.consciousExitEyebrow, { color: '#fb7185' }]}>CONSCIOUS EXIT CONTRACT</Text>
+              <Text style={styles.consciousExitTitle}>"One Last Reel" Wind-Down</Text>
+
+              <Text style={styles.consciousExitDesc}>
+                You've hit your mindful boundary of {dailyLimit} shorts. Finish this final video with calm intention, then place your phone face down.
+              </Text>
+
+              <View style={styles.consciousExitTimerWrap}>
+                <Text style={[styles.consciousExitCountdownBig, { color: currentTheme.primary }]}>
+                  {consciousExitCountdown}s
+                </Text>
+                <Text style={styles.consciousExitRemainingLabel}>Wind-down time remaining</Text>
+              </View>
+
+              <View style={styles.consciousExitProgressTrack}>
+                <View style={[styles.consciousExitProgressFill, { width: `${(consciousExitCountdown / 60) * 100}%`, backgroundColor: currentTheme.primary }]} />
+              </View>
+
+              <Pressable
+                onPress={() => {
+                  triggerDockHaptic();
+                  setShowConsciousExitModal(false);
+                  Alert.alert('Mindful Session Complete', 'Phone placed down. Prefrontal clarity preserved.');
+                }}
+                style={[styles.consciousExitCompleteBtn, { backgroundColor: currentTheme.primary }]}
+              >
+                <Text style={[styles.consciousExitCompleteBtnText, { color: currentTheme.background }]}>
+                  I'm Done · Place Phone Down
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
         </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -6476,6 +7601,145 @@ const styles = StyleSheet.create({
     color: '#a3b8ac',
     fontSize: 11,
     lineHeight: 15,
+  },
+  brandMascotWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introHeaderMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  introBrandMascotSub: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginTop: -2,
+  },
+  introMascotWelcomeHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 6,
+    marginBottom: 14,
+    gap: 14,
+  },
+  introMascotHeroLarge: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  introMascotWelcomeTextWrap: {
+    flex: 1,
+  },
+  introMascotBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  introMascotBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  introMascotWelcomeTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  introMascotWelcomeDesc: {
+    color: '#8aa395',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  introMascotCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    marginVertical: 10,
+  },
+  introMascotRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  introMascotAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    position: 'relative',
+  },
+  introMascotAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  introMascotStatusDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#0b0e0c',
+  },
+  introMascotSpeechWrap: {
+    flex: 1,
+  },
+  introMascotHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
+  },
+  introMascotName: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  introMascotPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  introMascotPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  introMascotSpeech: {
+    color: '#d1ded7',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
+  },
+  introCelebrationMascot: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(56, 211, 159, 0.4)',
   },
 
   introHeroIllustration: {
@@ -9297,6 +10561,678 @@ const styles = StyleSheet.create({
   },
   themeChipNameSelected: {
     color: '#f1f5f3',
+  },
+
+  // In-Feed Neuro-Interventions Styles
+  neuroCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  neuroHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  neuroIconHalo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  neuroTitleCol: {
+    flex: 1,
+  },
+  neuroEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  neuroTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  neuroDesc: {
+    color: '#94a3b8',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  neuroItemCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
+  },
+  neuroItemTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  neuroItemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  neuroItemTitle: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  neuroItemDesc: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  neuroModeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  neuroModeChip: {
+    flex: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  neuroModeChipActive: {},
+  neuroModeText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  neuroModeTextActive: {},
+  neuroActionBtn: {
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  neuroActionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  neuroStatRow: {
+    marginBottom: 10,
+  },
+  neuroStatBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  neuroStatBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  realityRatioBox: {
+    marginBottom: 10,
+  },
+  realityRatioBar: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#1e293b',
+    flexDirection: 'row',
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  realityRatioNourishFill: {
+    height: '100%',
+    backgroundColor: '#38d39f',
+  },
+  realityRatioDrainFill: {
+    height: '100%',
+    backgroundColor: '#fb7185',
+  },
+  realityRatioLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  realityRatioNourishText: {
+    color: '#38d39f',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  realityRatioDrainText: {
+    color: '#fb7185',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  realityInsightCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 10,
+  },
+  realityInsightText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+
+  // Morning Alignment Launcher
+  morningLauncherCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  morningLauncherRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  morningAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  morningAvatarThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  morningLauncherCol: {
+    flex: 1,
+  },
+  morningLauncherEyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  morningLauncherEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+  morningLauncherBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  morningLauncherBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  morningLauncherTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 2,
+  },
+  morningLauncherSubtitle: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  morningLauncherActionBtn: {
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  morningLauncherActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Mascot Floating HUD Adaptive Simulator
+  mascotHudCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  mascotExpressionBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  mascotExpressionBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  mascotHudStage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#0a0a0f',
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+  mascotHudPreviewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#12111a',
+    borderRadius: 26,
+    borderWidth: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    elevation: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  mascotHudAvatarRing: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    overflow: 'hidden',
+    marginRight: 8,
+  },
+  mascotHudAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  mascotHudPillTextCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mascotHudPillTitle: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  mascotHudPillCount: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  mascotCoachingCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  mascotCoachingDesc: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  mascotStateBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mascotStateBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mascotStateBtnActive: {},
+  mascotStateBtnText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  mascotStateBtnTextActive: {},
+
+  // Home Screen Widget Showcase
+  widgetShowcaseCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    marginBottom: 16,
+  },
+  widgetBoxPreview: {
+    backgroundColor: '#0e0e14',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    padding: 16,
+    marginBottom: 10,
+  },
+  widgetBoxHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  widgetMascotHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  widgetAvatarWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+  },
+  widgetAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  widgetTitleCol: {
+    justifyContent: 'center',
+  },
+  widgetBoxTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  widgetBoxMood: {
+    color: '#94a3b8',
+    fontSize: 11,
+  },
+  widgetAllowanceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  widgetAllowanceText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  widgetCounterRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  widgetBigCount: {
+    color: '#ffffff',
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  widgetLimitLabel: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  widgetSprintBtn: {
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  widgetSprintBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  widgetInstructionsText: {
+    color: '#64748b',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+
+  // Modals Styles
+  morningCard: {
+    width: '88%',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 20,
+    shadowColor: '#000000',
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+  },
+  morningAvatarHero: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 2,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  morningAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  morningBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  morningBadgePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+  },
+  morningTitle: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  morningHighlight: {
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  morningDesc: {
+    color: '#94a3b8',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  morningProgressWrap: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  morningProgressBarTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1e293b',
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  morningProgressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  morningCountdownText: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  morningActionBtn: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  morningActionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  // Reality Check Modal
+  realityCheckModalCard: {
+    width: '88%',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    padding: 22,
+    elevation: 20,
+  },
+  realityModalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  realityModalAvatarWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+  },
+  realityModalAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  realityModalEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  realityModalTitle: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  realityModalQuestion: {
+    color: '#e2e8f0',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 18,
+  },
+  realityBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  realityBtnNourish: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  realityBtnDrain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  realityBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  realityModalDismissBtn: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  realityModalDismissText: {
+    color: '#64748b',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Conscious Exit Modal
+  consciousExitModalCard: {
+    width: '88%',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    padding: 22,
+    alignItems: 'center',
+    elevation: 20,
+  },
+  consciousExitAvatarWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  consciousExitAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  consciousExitEyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  consciousExitTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  consciousExitDesc: {
+    color: '#94a3b8',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  consciousExitTimerWrap: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  consciousExitCountdownBig: {
+    fontSize: 36,
+    fontWeight: '900',
+  },
+  consciousExitRemainingLabel: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  consciousExitProgressTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1e293b',
+    overflow: 'hidden',
+    marginBottom: 18,
+  },
+  consciousExitProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  consciousExitCompleteBtn: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consciousExitCompleteBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
 
