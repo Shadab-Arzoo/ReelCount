@@ -395,6 +395,14 @@ const getChronoAnalysis = (): { level: string; badgeColor: string; iconName: Ico
   };
 };
 
+const POLLY_INTRO_TIPS = [
+  "Hi, I'm Polly! Short video algorithms are engineered to hypnotize you. I'm here to give your autonomy back!",
+  "Poke me again! 80% of reel scrolling happens on unconscious autopilot. We break that trance in real-time.",
+  "My headphones filter out algorithmic noise so you stay in creative, mindful flow all day!",
+  "Zero swiping down! Everything in your Sanctuary is right at your fingertips - crisp, mindful, and fast.",
+  "You set the boundaries, I hold the space. When you hit your cap, I'll gently nudge you away with zero guilt!",
+];
+
 function App() {
   const { width: windowWidth } = useWindowDimensions();
   const introScrollRef = useRef<any>(null);
@@ -436,6 +444,76 @@ function App() {
   const [dopamineFastActive, setDopamineFastActive] = useState<boolean>(false);
   const [soundscape, setSoundscape] = useState<FocusSoundscape>('rain');
   const [soundscapePlaying, setSoundscapePlaying] = useState<boolean>(false);
+
+  // Interactive Polly Mascot & Onboarding state
+  const [pollyTipIndex, setPollyTipIndex] = useState(0);
+  const pollyScaleAnim = useRef(new Animated.Value(1.0)).current;
+  const pollyRotateAnim = useRef(new Animated.Value(0)).current;
+  const [introSoundscapeActive, setIntroSoundscapeActive] = useState(false);
+  const introSoundscapeTimerRef = useRef<any>(null);
+
+  const handlePokePolly = useCallback(() => {
+    try {
+      if (typeof Vibration?.vibrate === 'function') {
+        Vibration.vibrate(12);
+      }
+    } catch {}
+    setPollyTipIndex(prev => (prev + 1) % 5);
+
+    Animated.sequence([
+      Animated.timing(pollyScaleAnim, {
+        toValue: 1.18,
+        duration: 90,
+        useNativeDriver: true,
+      }),
+      Animated.spring(pollyScaleAnim, {
+        toValue: 1.0,
+        friction: 3.5,
+        tension: 140,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.timing(pollyRotateAnim, {
+        toValue: 1,
+        duration: 75,
+        useNativeDriver: true,
+      }),
+      Animated.timing(pollyRotateAnim, {
+        toValue: -1,
+        duration: 75,
+        useNativeDriver: true,
+      }),
+      Animated.spring(pollyRotateAnim, {
+        toValue: 0,
+        friction: 4,
+        tension: 140,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [pollyRotateAnim, pollyScaleAnim]);
+
+  const handleToggleIntroSoundscape = useCallback(() => {
+    try {
+      if (typeof Vibration?.vibrate === 'function') {
+        Vibration.vibrate(10);
+      }
+    } catch {}
+    if (introSoundscapeActive) {
+      if (introSoundscapeTimerRef.current) clearTimeout(introSoundscapeTimerRef.current);
+      setIntroSoundscapeActive(false);
+      PrototypeSettings.stopSoundscape().catch(() => {});
+    } else {
+      setIntroSoundscapeActive(true);
+      PrototypeSettings.playSoundscape('rain', 25).catch(() => {});
+      if (introSoundscapeTimerRef.current) clearTimeout(introSoundscapeTimerRef.current);
+      introSoundscapeTimerRef.current = setTimeout(() => {
+        setIntroSoundscapeActive(false);
+        PrototypeSettings.stopSoundscape().catch(() => {});
+      }, 5000);
+    }
+  }, [introSoundscapeActive]);
 
   // Block & Focus state
   const [focusModeActive, setFocusModeActive] = useState(false);
@@ -1731,6 +1809,10 @@ function App() {
   }, [consentGiven]);
 
   const handleEnterDashboard = () => {
+    if (introSoundscapeTimerRef.current) {
+      clearTimeout(introSoundscapeTimerRef.current);
+    }
+    PrototypeSettings.stopSoundscape().catch(() => {});
     setShowIntro(false);
     PrototypeSettings.setOnboardingCompleted(true).catch(() => {});
   };
@@ -2141,7 +2223,7 @@ function App() {
           ))}
         </View>
 
-        {/* Horizontal Paging Carousel */}
+        {/* Horizontal Paging Carousel - Fully Non-Scrolling Slides (No Swipe Down Needed) */}
         <ScrollView
           ref={introScrollRef}
           horizontal
@@ -2154,617 +2236,705 @@ function App() {
           scrollEventThrottle={16}
           style={styles.introPager}
         >
-          {/* SLIDE 1: AWARENESS & INTENTION */}
-          <ScrollView
-            style={{ width: slideWidth }}
-            contentContainerStyle={styles.introSlideContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.introCardWrap}>
-              <Image
-                source={require('./src/assets/images/intro_slide_focus.jpg')}
-                style={styles.introHeroSlideImage}
-                resizeMode="cover"
-              />
-              <View style={styles.introSlideBody}>
-                <View style={styles.introEyebrowBadge}>
+          {/* SLIDE 1: AWARENESS & INTENTION (No vertical swipe down) */}
+          <View style={{ width: slideWidth, flex: 1, paddingHorizontal: 14, paddingVertical: 4 }}>
+            <View style={[styles.introSlideCardFixed, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+              {/* Eyebrow & Title */}
+              <View style={styles.introSlideHeaderCompact}>
+                <View style={[styles.introEyebrowBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                  <AppIcon name="sparkle" size={11} color={currentTheme.primary} />
                   <Text style={[styles.introEyebrowText, { color: currentTheme.primary }]}>
                     STEP 1 OF 4 · MINDFUL INTENTION
                   </Text>
                 </View>
-                <Text style={styles.introSlideTitle}>Break the Doomscroll Loop</Text>
-                <Text style={styles.introSlideSubtitle}>
-                  Quietly observe short video scrolling across Instagram Reels, YouTube Shorts, and TikTok before hours slip away.
+                <Text style={styles.introSlideTitleCompact}>Break the Doomscroll Loop</Text>
+                <Text style={[styles.introSlideSubtitleCompact, { color: currentTheme.subtext }]}>
+                  Quietly observe short video scrolling across Instagram, TikTok, and YouTube before hours slip away.
                 </Text>
+              </View>
 
-                {/* Meet Polly Hero Banner */}
-                <View style={[styles.introMascotWelcomeHero, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
-                  <Image
-                    source={require('./src/assets/images/app_mascot.jpg')}
-                    style={styles.introMascotHeroLarge}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.introMascotWelcomeTextWrap}>
-                    <View style={[styles.introMascotBadgePill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                      <AppIcon name="sparkle" size={11} color={currentTheme.primary} />
-                      <Text style={[styles.introMascotBadgeText, { color: currentTheme.primary }]}>YOUR MINDFUL GUIDE</Text>
+              {/* Interactive Polly Mascot Card with Tap-to-Poke Animation */}
+              <Pressable
+                onPress={handlePokePolly}
+                style={[styles.introInteractivePollyCard, { borderColor: currentTheme.primary, backgroundColor: currentTheme.surfaceRaised }]}
+                accessibilityLabel="Tap Polly the Mascot for advice"
+              >
+                <View style={styles.introPollyRow}>
+                  <Animated.View
+                    style={[
+                      styles.introMascotAvatarInteractiveWrap,
+                      {
+                        borderColor: currentTheme.primary,
+                        backgroundColor: currentTheme.glow,
+                        transform: [
+                          { scale: pollyScaleAnim },
+                          {
+                            rotate: pollyRotateAnim.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: ['-12deg', '0deg', '12deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={require('./src/assets/images/app_mascot.jpg')}
+                      style={styles.introMascotAvatarInteractive}
+                      resizeMode="cover"
+                    />
+                    <View style={[styles.introMascotPokeHintPill, { backgroundColor: currentTheme.primary }]}>
+                      <Text style={styles.introMascotPokeHintText}>TAP ME</Text>
                     </View>
-                    <Text style={styles.introMascotWelcomeTitle}>Hi, I'm Polly!</Text>
-                    <Text style={styles.introMascotWelcomeDesc}>
-                      Short feeds are engineered to steal hours. I'm here to help you enjoy reels consciously without the dopamine drag!
+                  </Animated.View>
+
+                  <View style={styles.introPollySpeechBubble}>
+                    <View style={styles.introMascotHeaderRow}>
+                      <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Mindful Guide</Text>
+                      <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                        <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>POKE FOR TIPS</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.introMascotSpeech}>
+                      {POLLY_INTRO_TIPS[pollyTipIndex]}
                     </Text>
                   </View>
                 </View>
+              </Pressable>
 
-                {/* Interactive Boundary Goal Selector */}
-                <View style={styles.introInteractiveSection}>
-                  <Text style={[styles.introSectionMiniTitle, { color: currentTheme.primary }]}>
+              {/* Interactive Boundary Goal Selector */}
+              <View style={styles.introInteractiveSectionCompact}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={[styles.introSectionMiniTitle, { color: currentTheme.primary, marginBottom: 0 }]}>
                     CHOOSE YOUR DAILY MINDFUL BOUNDARY
                   </Text>
-                  <View style={styles.introGoalRow}>
-                    {[
-                      { cap: 25, label: 'Strict Detox', sub: '~12m / day', iconName: 'bolt' as IconName },
-                      { cap: 50, label: 'Balanced', sub: '~25m (Recommended)', iconName: 'leaf' as IconName },
-                      { cap: 100, label: 'Gentle', sub: '~50m / day', iconName: 'target' as IconName },
-                    ].map(preset => {
-                      const isSelected = dailyLimit === preset.cap;
-                      return (
-                        <Pressable
-                          key={preset.cap}
-                          onPress={() => {
-                            triggerDockHaptic();
-                            setDailyLimit(preset.cap);
-                            PrototypeSettings.setDailyLimits(preset.cap, dailyTimeLimitMin).catch(() => {});
-                          }}
-                          style={[
-                            styles.introGoalOptionCard,
-                            {
-                              borderColor: isSelected ? currentTheme.primary : currentTheme.hairline,
-                              backgroundColor: isSelected ? currentTheme.glow : currentTheme.surface,
-                            },
-                          ]}
-                        >
-                          <AppIcon name={preset.iconName} size={20} color={isSelected ? currentTheme.primary : currentTheme.subtext} style={{ marginBottom: 6 }} />
-                          <Text style={[styles.introGoalOptionCap, isSelected && { color: currentTheme.primary }]}>
-                            {preset.cap}
-                          </Text>
-                          <Text style={styles.introGoalOptionLabel}>{preset.label}</Text>
-                          <Text style={styles.introGoalOptionSub}>{preset.sub}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                  <Text style={[styles.introSelectedBoundaryTag, { color: currentTheme.primary }]}>
+                    {dailyLimit} videos
+                  </Text>
                 </View>
 
-                {/* Mascot Live Habit Advice */}
-                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
-                  <View style={styles.introMascotRow}>
-                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
-                      <Image
-                        source={require('./src/assets/images/app_mascot.jpg')}
-                        style={styles.introMascotAvatar}
-                        resizeMode="cover"
-                      />
-                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
-                    </View>
-                    <View style={styles.introMascotSpeechWrap}>
-                      <View style={styles.introMascotHeaderRow}>
-                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly's Habit Advice</Text>
-                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>RECOMMENDED</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.introMascotSpeech}>
-                        {dailyLimit === 25
-                          ? 'Strict Detox selected! You will reclaim ~2 hours every single day for real-world life and creative focus.'
-                          : dailyLimit === 50
-                          ? 'Balanced 50-swipe boundary! The sweet spot: enjoy content during breaks without falling into autopilot scrolling.'
-                          : 'Gentle 100-swipe cap! Keeps late-night rabbit holes from spiraling out of control while easing into habit change.'}
-                      </Text>
-                    </View>
-                  </View>
+                <View style={styles.introGoalRow}>
+                  {[
+                    { cap: 25, label: 'Strict Detox', sub: '~12m / day', iconName: 'bolt' as IconName },
+                    { cap: 50, label: 'Balanced', sub: '~25m (Recommended)', iconName: 'leaf' as IconName },
+                    { cap: 100, label: 'Gentle', sub: '~50m / day', iconName: 'target' as IconName },
+                  ].map(preset => {
+                    const isSelected = dailyLimit === preset.cap;
+                    return (
+                      <Pressable
+                        key={preset.cap}
+                        onPress={() => {
+                          triggerDockHaptic();
+                          setDailyLimit(preset.cap);
+                          PrototypeSettings.setDailyLimits(preset.cap, dailyTimeLimitMin).catch(() => {});
+                        }}
+                        style={[
+                          styles.introGoalOptionCardCompact,
+                          {
+                            borderColor: isSelected ? currentTheme.primary : currentTheme.hairline,
+                            backgroundColor: isSelected ? currentTheme.glow : currentTheme.surface,
+                          },
+                        ]}
+                      >
+                        <AppIcon
+                          name={preset.iconName}
+                          size={18}
+                          color={isSelected ? currentTheme.primary : currentTheme.subtext}
+                          style={{ marginBottom: 4 }}
+                        />
+                        <Text style={[styles.introGoalOptionCap, isSelected && { color: currentTheme.primary }]}>
+                          {preset.cap}
+                        </Text>
+                        <Text style={styles.introGoalOptionLabel}>{preset.label}</Text>
+                        <Text style={styles.introGoalOptionSub}>{preset.sub}</Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
+              </View>
 
-                <View style={styles.introChipRow}>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="reels" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Multi-App Tracking</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="zen" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Mindful Speedbump</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="trophy" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Zen XP Level</Text>
-                  </View>
+              {/* Live Mascot Advice for Chosen Boundary */}
+              <View style={[styles.introBoundaryAdviceCard, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <AppIcon name="sparkle" size={12} color={currentTheme.primary} />
+                  <Text style={[styles.introBoundaryAdviceTitle, { color: currentTheme.primary }]}>
+                    {dailyLimit === 25 ? 'Strict Detox Advice' : dailyLimit === 50 ? 'Balanced Pace Advice' : 'Gentle Boundary Advice'}
+                  </Text>
+                </View>
+                <Text style={[styles.introBoundaryAdviceBody, { color: currentTheme.subtext }]} numberOfLines={2}>
+                  {dailyLimit === 25
+                    ? 'Strict 25-swipe boundary! Reclaim ~2 hours every single day for real-world life and creative focus.'
+                    : dailyLimit === 50
+                    ? 'Balanced 50-swipe boundary! Enjoy content during breaks without falling into autopilot scrolling.'
+                    : 'Gentle 100-swipe cap! Keeps late-night feeds from spiraling out of control while easing into habit change.'}
+                </Text>
+              </View>
+
+              {/* Feature Chips */}
+              <View style={styles.introChipRowCompact}>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="reels" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Multi-App Tracking</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="zen" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Mindful Speedbump</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="trophy" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Zen XP Level</Text>
                 </View>
               </View>
             </View>
-          </ScrollView>
+          </View>
 
-          {/* SLIDE 2: LIVE HUD & SIMULATOR */}
-          <ScrollView
-            style={{ width: slideWidth }}
-            contentContainerStyle={styles.introSlideContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.introCardWrap}>
-              <Image
-                source={require('./src/assets/images/intro_slide_hud.jpg')}
-                style={styles.introHeroSlideImage}
-                resizeMode="cover"
-              />
-              <View style={styles.introSlideBody}>
-                <View style={styles.introEyebrowBadge}>
+          {/* SLIDE 2: LIVE HUD & SIMULATOR (No vertical swipe down) */}
+          <View style={{ width: slideWidth, flex: 1, paddingHorizontal: 14, paddingVertical: 4 }}>
+            <View style={[styles.introSlideCardFixed, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+              {/* Eyebrow & Title */}
+              <View style={styles.introSlideHeaderCompact}>
+                <View style={[styles.introEyebrowBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                  <AppIcon name="bolt" size={11} color={currentTheme.primary} />
                   <Text style={[styles.introEyebrowText, { color: currentTheme.primary }]}>
                     STEP 2 OF 4 · TACTILE HUD
                   </Text>
                 </View>
-                <Text style={styles.introSlideTitle}>Live On-Screen Swipe HUD</Text>
-                <Text style={styles.introSlideSubtitle}>
-                  A discrete floating pill hovers over your screen with gentle haptic ticks on every video you swipe.
+                <Text style={styles.introSlideTitleCompact}>Live On-Screen Swipe HUD</Text>
+                <Text style={[styles.introSlideSubtitleCompact, { color: currentTheme.subtext }]}>
+                  A discrete floating pill hovers over feeds with gentle haptic ticks on every video you swipe.
                 </Text>
+              </View>
 
-                {/* Interactive Floating HUD Simulator */}
-                <View style={[styles.introHudSimulatorCard, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
-                  <View style={styles.introHudSimHeader}>
-                    <Text style={[styles.introHudSimTitle, { color: currentTheme.primary }]}>
-                      Interactive Floating HUD Simulator
-                    </Text>
-                    <View style={[styles.introHudSimBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-                      <Text style={[styles.introHudSimBadgeText, { color: currentTheme.primary }]}>LIVE PREVIEW</Text>
+              {/* Interactive Floating HUD Simulator Card */}
+              <View style={[styles.introHudSimulatorCardCompact, { borderColor: currentTheme.border, backgroundColor: currentTheme.surfaceRaised }]}>
+                <View style={styles.introHudSimHeader}>
+                  <Text style={[styles.introHudSimTitle, { color: currentTheme.primary }]}>
+                    Interactive Floating HUD Simulator
+                  </Text>
+                  <View style={[styles.introHudSimBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                    <Text style={[styles.introHudSimBadgeText, { color: currentTheme.primary }]}>LIVE PREVIEW</Text>
+                  </View>
+                </View>
+
+                {/* Live Pill Simulation Stage */}
+                <View style={styles.introHudSimStageCompact}>
+                  <View style={[styles.introHudPreviewPillCompact, { borderColor: currentTheme.border }]}>
+                    <View style={[styles.introHudMascotMiniWrap, { borderColor: currentTheme.primary }]}>
+                      <Image
+                        source={require('./src/assets/images/app_mascot.jpg')}
+                        style={styles.introHudMascotMini}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <Text style={styles.introHudPillText}>Reels HUD</Text>
+                    <View style={[styles.introHudPillCounterBadge, { backgroundColor: currentTheme.glow }]}>
+                      <Text style={[styles.introHudPillCounterVal, { color: currentTheme.primary }]}>
+                        {`${introDemoHudCount} swipes`}
+                      </Text>
+                    </View>
+                    <View style={[styles.introHudExpressionPill, { backgroundColor: introDemoHudCount < 4 ? 'rgba(56, 211, 159, 0.2)' : introDemoHudCount < 8 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 113, 133, 0.2)' }]}>
+                      <Text style={[styles.introHudExpressionText, { color: introDemoHudCount < 4 ? '#6EE3AD' : introDemoHudCount < 8 ? '#FBBF24' : '#FB7185' }]}>
+                        {introDemoHudCount < 4 ? 'CALM' : introDemoHudCount < 8 ? 'ATTENTIVE' : 'REST'}
+                      </Text>
                     </View>
                   </View>
+                </View>
 
-                  <View style={styles.introHudSimStage}>
-                    <View style={[styles.introHudPreviewPill, { borderColor: currentTheme.border }]}>
-                      <View style={[styles.introHudPillDot, { backgroundColor: currentTheme.primary }]} />
-                      <Text style={styles.introHudPillText}>Reels HUD</Text>
-                      <View style={[styles.introHudPillCounterBadge, { backgroundColor: currentTheme.glow }]}>
-                        <Text style={[styles.introHudPillCounterVal, { color: currentTheme.primary }]}>
-                          {`${introDemoHudCount} swipes`}
+                {/* Primary Interactive Simulation Button */}
+                <Pressable
+                  onPress={() => {
+                    triggerDockHaptic();
+                    setIntroDemoHudCount(c => c + 1);
+                  }}
+                  style={[styles.introSimulateSwipeBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <AppIcon name="bolt" size={15} color={currentTheme.actionText} />
+                    <Text style={[styles.introSimulateSwipeText, { color: currentTheme.actionText }]}>
+                      Tap to Simulate Video Swipe (+1)
+                    </Text>
+                  </View>
+                </Pressable>
+                <Text style={styles.introSimulateHelpText}>
+                  Discreetly floats on top of Instagram, TikTok, and YouTube with gentle haptic ticks.
+                </Text>
+              </View>
+
+              {/* Interactive Polly Coach Card with Poke Action */}
+              <Pressable
+                onPress={handlePokePolly}
+                style={[styles.introMascotCardCompact, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.border }]}
+              >
+                <View style={styles.introMascotRow}>
+                  <Animated.View
+                    style={[
+                      styles.introMascotAvatarInteractiveWrap,
+                      {
+                        borderColor: currentTheme.primary,
+                        backgroundColor: currentTheme.glow,
+                        transform: [
+                          { scale: pollyScaleAnim },
+                          {
+                            rotate: pollyRotateAnim.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: ['-12deg', '0deg', '12deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={require('./src/assets/images/app_mascot.jpg')}
+                      style={styles.introMascotAvatarInteractive}
+                      resizeMode="cover"
+                    />
+                  </Animated.View>
+                  <View style={styles.introMascotSpeechWrap}>
+                    <View style={styles.introMascotHeaderRow}>
+                      <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Tactile Coach</Text>
+                      <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                        <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>
+                          {introDemoHudCount > 2 ? 'ACTIVE PULSE' : 'TRY SWIPING'}
                         </Text>
                       </View>
                     </View>
-                  </View>
-
-                  <Pressable
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setIntroDemoHudCount(c => c + 1);
-                    }}
-                    style={[styles.introSimulateSwipeBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <AppIcon name="bolt" size={15} color={currentTheme.actionText} />
-                      <Text style={[styles.introSimulateSwipeText, { color: currentTheme.actionText }]}>
-                        Tap to Simulate Video Swipe (+1)
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <Text style={styles.introSimulateHelpText}>
-                    Discreetly floats on top of Instagram, TikTok, and YouTube with gentle haptic ticks.
-                  </Text>
-                </View>
-
-                {/* Mascot Live Swipe Reaction Card */}
-                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
-                  <View style={styles.introMascotRow}>
-                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
-                      <Image
-                        source={require('./src/assets/images/app_mascot.jpg')}
-                        style={styles.introMascotAvatar}
-                        resizeMode="cover"
-                      />
-                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
-                    </View>
-                    <View style={styles.introMascotSpeechWrap}>
-                      <View style={styles.introMascotHeaderRow}>
-                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Tactile Coach</Text>
-                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>
-                            {introDemoHudCount > 2 ? 'ACTIVE PULSE' : 'TRY SWIPING'}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.introMascotSpeech}>
-                        {introDemoHudCount <= 2
-                          ? 'Tap the button above to test me! Each swipe triggers a gentle haptic click to break autopilot mesmerization.'
-                          : introDemoHudCount <= 5
-                          ? `Swipe #${introDemoHudCount} counted! Feel that gentle pulse? It wakes up your prefrontal cortex before mindless scrolling takes over.`
-                          : `${introDemoHudCount} swipes simulated! You can drag this floating pill anywhere on screen inside real video apps.`}
-                      </Text>
-                    </View>
+                    <Text style={styles.introMascotSpeech}>
+                      {introDemoHudCount <= 2
+                        ? 'Tap the button above! Each swipe triggers a gentle haptic click to break autopilot mesmerization.'
+                        : introDemoHudCount <= 5
+                        ? `Swipe #${introDemoHudCount} counted! Feel that gentle pulse? It awakens your prefrontal cortex.`
+                        : `${introDemoHudCount} swipes simulated! My expression adapts live to gently nudge you when pace speeds up.`}
+                    </Text>
                   </View>
                 </View>
+              </Pressable>
 
-                <View style={styles.introChipRow}>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="dashboard" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Draggable Anywhere</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="flame" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Haptic Tick</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="bolt" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Loop Nudge</Text>
-                  </View>
+              {/* Feature Chips */}
+              <View style={styles.introChipRowCompact}>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="dashboard" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Draggable Anywhere</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="flame" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Haptic Tick</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="bolt" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Adaptive Mascot HUD</Text>
                 </View>
               </View>
             </View>
-          </ScrollView>
+          </View>
 
-          {/* SLIDE 3: BEDTIME & FOCUS SAFEGUARDS */}
-          <ScrollView
-            style={{ width: slideWidth }}
-            contentContainerStyle={styles.introSlideContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.introCardWrap}>
-              <Image
-                source={require('./src/assets/images/intro_slide_shield.jpg')}
-                style={styles.introHeroSlideImage}
-                resizeMode="cover"
-              />
-              <View style={styles.introSlideBody}>
-                <View style={styles.introEyebrowBadge}>
+          {/* SLIDE 3: BEDTIME & FOCUS SAFEGUARDS (No vertical swipe down) */}
+          <View style={{ width: slideWidth, flex: 1, paddingHorizontal: 14, paddingVertical: 4 }}>
+            <View style={[styles.introSlideCardFixed, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+              {/* Eyebrow & Title */}
+              <View style={styles.introSlideHeaderCompact}>
+                <View style={[styles.introEyebrowBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                  <AppIcon name="moon" size={11} color={currentTheme.primary} />
                   <Text style={[styles.introEyebrowText, { color: currentTheme.primary }]}>
                     STEP 3 OF 4 · PROTECTION
                   </Text>
                 </View>
-                <Text style={styles.introSlideTitle}>Night Shield & Focus Lock</Text>
-                <Text style={styles.introSlideSubtitle}>
+                <Text style={styles.introSlideTitleCompact}>Night Shield & Focus Lock</Text>
+                <Text style={[styles.introSlideSubtitleCompact, { color: currentTheme.subtext }]}>
                   Automatic 11 PM bedtime lockdown and 1-tap focus shields keep distraction feeds strictly closed.
                 </Text>
+              </View>
 
-                {/* Interactive Shield Defenses */}
-                <View style={styles.introShieldsBox}>
-                  <Pressable
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setBedtimeShield(prev => !prev);
-                    }}
+              {/* Interactive Shield Defenses Box */}
+              <View style={styles.introShieldsBoxCompact}>
+                {/* 11 PM Sleep Sanctuary Toggle */}
+                <Pressable
+                  onPress={() => {
+                    triggerDockHaptic();
+                    setBedtimeShield(prev => !prev);
+                  }}
+                  style={[
+                    styles.introShieldRowCompact,
+                    {
+                      borderColor: bedtimeShield ? currentTheme.border : currentTheme.hairline,
+                      backgroundColor: bedtimeShield ? currentTheme.glow : currentTheme.surfaceRaised,
+                    },
+                  ]}
+                >
+                  <View style={styles.introShieldCol}>
+                    <View style={styles.introShieldTitleRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <AppIcon name="moon" size={16} color={currentTheme.primary} />
+                        <Text style={styles.introShieldTitle}>11 PM Sleep Sanctuary</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.introShieldActiveTag,
+                          bedtimeShield
+                            ? [styles.introShieldTagActive, { backgroundColor: currentTheme.primary }]
+                            : styles.introShieldTagIdle,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.introShieldActiveTagText,
+                            bedtimeShield ? { color: '#000000', fontWeight: '800' } : styles.introShieldTagTextIdle,
+                          ]}
+                        >
+                          {bedtimeShield ? 'ENABLED' : 'OFF'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.introShieldDesc}>
+                      Auto-shield late night feeds so midnight scrolling doesn't steal sleep.
+                    </Text>
+                  </View>
+                </Pressable>
+
+                {/* Mindful Speedbump Toggle */}
+                <Pressable
+                  onPress={() => {
+                    triggerDockHaptic();
+                    setSpeedbumpEnabled(prev => !prev);
+                  }}
+                  style={[
+                    styles.introShieldRowCompact,
+                    {
+                      borderColor: speedbumpEnabled ? currentTheme.border : currentTheme.hairline,
+                      backgroundColor: speedbumpEnabled ? currentTheme.glow : currentTheme.surfaceRaised,
+                      marginTop: 8,
+                    },
+                  ]}
+                >
+                  <View style={styles.introShieldCol}>
+                    <View style={styles.introShieldTitleRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <AppIcon name="zen" size={16} color={currentTheme.primary} />
+                        <Text style={styles.introShieldTitle}>Mindful Speedbump</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.introShieldActiveTag,
+                          speedbumpEnabled
+                            ? [styles.introShieldTagActive, { backgroundColor: currentTheme.primary }]
+                            : styles.introShieldTagIdle,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.introShieldActiveTagText,
+                            speedbumpEnabled ? { color: '#000000', fontWeight: '800' } : styles.introShieldTagTextIdle,
+                          ]}
+                        >
+                          {speedbumpEnabled ? 'ENABLED' : 'OFF'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.introShieldDesc}>
+                      Subtle 5-second breath pause every 15 short videos to break unconscious loops.
+                    </Text>
+                  </View>
+                </Pressable>
+
+                {/* Interactive Soundscape Player Button */}
+                <Pressable
+                  onPress={handleToggleIntroSoundscape}
+                  style={[
+                    styles.introSoundscapeDemoBtn,
+                    {
+                      borderColor: introSoundscapeActive ? currentTheme.primary : currentTheme.border,
+                      backgroundColor: introSoundscapeActive ? currentTheme.glow : currentTheme.surfaceRaised,
+                    },
+                  ]}
+                >
+                  <AppIcon name="music" size={14} color={currentTheme.primary} />
+                  <Text style={[styles.introSoundscapeDemoText, { color: currentTheme.primary }]}>
+                    {introSoundscapeActive ? 'Playing Rain Soundscape (5s Demo)...' : 'Test Calming Soundscape (5s Demo)'}
+                  </Text>
+                  <View style={[styles.introSoundscapePill, { backgroundColor: currentTheme.glow }]}>
+                    <Text style={[styles.introSoundscapePillText, { color: currentTheme.primary }]}>
+                      {introSoundscapeActive ? 'ACTIVE' : 'SAMPLE'}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Interactive Polly Circadian Wisdom Card */}
+              <Pressable
+                onPress={handlePokePolly}
+                style={[styles.introMascotCardCompact, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.border }]}
+              >
+                <View style={styles.introMascotRow}>
+                  <Animated.View
                     style={[
-                      styles.introShieldRow,
+                      styles.introMascotAvatarInteractiveWrap,
                       {
-                        borderColor: bedtimeShield ? currentTheme.border : currentTheme.hairline,
-                        backgroundColor: currentTheme.surface,
+                        borderColor: currentTheme.primary,
+                        backgroundColor: currentTheme.glow,
+                        transform: [
+                          { scale: pollyScaleAnim },
+                          {
+                            rotate: pollyRotateAnim.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: ['-12deg', '0deg', '12deg'],
+                            }),
+                          },
+                        ],
                       },
                     ]}
                   >
-                    <View style={styles.introShieldCol}>
-                      <View style={styles.introShieldTitleRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppIcon name="moon" size={16} color={currentTheme.primary} />
-                          <Text style={styles.introShieldTitle}>11 PM Sleep Sanctuary</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.introShieldActiveTag,
-                            bedtimeShield
-                              ? [styles.introShieldTagActive, { backgroundColor: currentTheme.glow }]
-                              : styles.introShieldTagIdle,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.introShieldActiveTagText,
-                              bedtimeShield
-                                ? [styles.introShieldTagTextActive, { color: currentTheme.primary }]
-                                : styles.introShieldTagTextIdle,
-                            ]}
-                          >
-                            {bedtimeShield ? 'ENABLED' : 'OFF'}
-                          </Text>
-                        </View>
+                    <Image
+                      source={require('./src/assets/images/app_mascot.jpg')}
+                      style={styles.introMascotAvatarInteractive}
+                      resizeMode="cover"
+                    />
+                  </Animated.View>
+                  <View style={styles.introMascotSpeechWrap}>
+                    <View style={styles.introMascotHeaderRow}>
+                      <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Circadian Wisdom</Text>
+                      <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                        <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>DEEP REST</Text>
                       </View>
-                      <Text style={styles.introShieldDesc}>
-                        Auto-shield late night feeds so midnight scrolling doesn't steal sleep.
-                      </Text>
                     </View>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => {
-                      triggerDockHaptic();
-                      setSpeedbumpEnabled(prev => !prev);
-                    }}
-                    style={[
-                      styles.introShieldRow,
-                      styles.introShieldRowSpaced,
-                      {
-                        borderColor: speedbumpEnabled ? currentTheme.border : currentTheme.hairline,
-                        backgroundColor: currentTheme.surface,
-                      },
-                    ]}
-                  >
-                    <View style={styles.introShieldCol}>
-                      <View style={styles.introShieldTitleRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <AppIcon name="zen" size={16} color={currentTheme.primary} />
-                          <Text style={styles.introShieldTitle}>Mindful Speedbump</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.introShieldActiveTag,
-                            speedbumpEnabled
-                              ? [styles.introShieldTagActive, { backgroundColor: currentTheme.glow }]
-                              : styles.introShieldTagIdle,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.introShieldActiveTagText,
-                              speedbumpEnabled
-                                ? [styles.introShieldTagTextActive, { color: currentTheme.primary }]
-                                : styles.introShieldTagTextIdle,
-                            ]}
-                          >
-                            {speedbumpEnabled ? 'ENABLED' : 'OFF'}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.introShieldDesc}>
-                        Subtle 5-second breath pause every 15 short videos to break unconscious loops.
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-
-                {/* Mascot Circadian Wisdom Card */}
-                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
-                  <View style={styles.introMascotRow}>
-                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
-                      <Image
-                        source={require('./src/assets/images/app_mascot.jpg')}
-                        style={styles.introMascotAvatar}
-                        resizeMode="cover"
-                      />
-                      <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
-                    </View>
-                    <View style={styles.introMascotSpeechWrap}>
-                      <View style={styles.introMascotHeaderRow}>
-                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly · Circadian Wisdom</Text>
-                        <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                          <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>DEEP REST</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.introMascotSpeech}>
-                        {bedtimeShield && speedbumpEnabled
-                          ? 'Both shields armed! Bedtime lockdown defends melatonin after 11 PM, and speedbumps give 5s breath breaks.'
-                          : bedtimeShield
-                          ? 'Sleep Sanctuary armed! Late night doomscrolling will be locked at 11 PM so you get deep REM sleep.'
-                          : speedbumpEnabled
-                          ? 'Speedbump active! You get a gentle 5-second breath pause every 15 videos to choose consciously.'
-                          : 'Tip: Late-night phone blue light delays REM sleep by up to 90 minutes. Turn on Sleep Sanctuary for sound sleep!'}
-                      </Text>
-                    </View>
+                    <Text style={styles.introMascotSpeech}>
+                      {bedtimeShield && speedbumpEnabled
+                        ? 'Both shields armed! Bedtime lockdown defends melatonin after 11 PM, and speedbumps give 5s breath breaks.'
+                        : bedtimeShield
+                        ? 'Sleep Sanctuary armed! Late night doomscrolling will be locked at 11 PM so you get deep REM sleep.'
+                        : speedbumpEnabled
+                        ? 'Speedbump active! You get a gentle 5-second breath pause every 15 videos to choose consciously.'
+                        : 'Tip: Late-night phone blue light delays REM sleep by up to 90 minutes. Turn on Sleep Sanctuary for sound sleep!'}
+                    </Text>
                   </View>
                 </View>
+              </Pressable>
 
-                <View style={styles.introChipRow}>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="moon" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>11 PM Sleep Sanctuary</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="shield" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Strict App Exit</Text>
-                  </View>
-                  <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                    <AppIcon name="lock" size={14} color={currentTheme.primary} />
-                    <Text style={styles.introChipText}>Quick Settings Tile</Text>
-                  </View>
+              {/* Feature Chips */}
+              <View style={styles.introChipRowCompact}>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="moon" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>11 PM Sleep Sanctuary</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="shield" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Strict App Exit</Text>
+                </View>
+                <View style={[styles.introFeatureChip, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                  <AppIcon name="lock" size={13} color={currentTheme.primary} />
+                  <Text style={styles.introChipText}>Quick Settings Tile</Text>
                 </View>
               </View>
             </View>
-          </ScrollView>
+          </View>
 
-          {/* SLIDE 4: PRIVACY & PERMISSIONS */}
-          <ScrollView
-            style={{ width: slideWidth }}
-            contentContainerStyle={styles.introSlideContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.introCardWrap}>
-              <Image
-                source={require('./src/assets/images/intro_slide_privacy.jpg')}
-                style={styles.introHeroSlideImage}
-                resizeMode="cover"
-              />
-              <View style={styles.introSlideBody}>
-                <View style={styles.introEyebrowBadge}>
+          {/* SLIDE 4: PRIVACY & PERMISSIONS (No vertical swipe down) */}
+          <View style={{ width: slideWidth, flex: 1, paddingHorizontal: 14, paddingVertical: 4 }}>
+            <View style={[styles.introSlideCardFixed, { borderColor: currentTheme.border, backgroundColor: currentTheme.surface }]}>
+              {/* Eyebrow & Title */}
+              <View style={styles.introSlideHeaderCompact}>
+                <View style={[styles.introEyebrowBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                  <AppIcon name="shield" size={11} color={currentTheme.primary} />
                   <Text style={[styles.introEyebrowText, { color: currentTheme.primary }]}>
                     STEP 4 OF 4 · 100% PRIVATE
                   </Text>
                 </View>
-                <Text style={styles.introSlideTitle}>Zero Cloud. 100% Local</Text>
-                <Text style={styles.introSlideSubtitle}>
+                <Text style={styles.introSlideTitleCompact}>Zero Cloud. 100% Local</Text>
+                <Text style={[styles.introSlideSubtitleCompact, { color: currentTheme.subtext }]}>
                   Zero network transmission. No screen content, chats, passwords, or personal data are ever read.
                 </Text>
+              </View>
 
-                {/* Mascot Setup Guidance Card */}
-                <View style={[styles.introMascotCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.border }]}>
-                  <View style={styles.introMascotRow}>
-                    <View style={[styles.introMascotAvatarWrap, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]}>
-                      <Image
-                        source={require('./src/assets/images/app_mascot.jpg')}
-                        style={styles.introMascotAvatar}
-                        resizeMode="cover"
-                      />
-                      <View style={[styles.introMascotStatusDot, { backgroundColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]} />
-                    </View>
-                    <View style={styles.introMascotSpeechWrap}>
-                      <View style={styles.introMascotHeaderRow}>
-                        <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>Polly's Setup Checklist</Text>
-                        <View style={[styles.introMascotPill, { backgroundColor: prototypeStatus.serviceConnected ? 'rgba(56, 211, 159, 0.15)' : currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                          <Text style={[styles.introMascotPillText, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
-                            {prototypeStatus.serviceConnected ? 'ALL CHECKS GREEN' : '100% PRIVATE'}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.introMascotSpeech}>
-                        {prototypeStatus.serviceConnected
-                          ? 'My checklist is complete! On-device tracking is live, private, and running smoothly. Welcome to your Sanctuary!'
-                          : 'I run 100% on your device with zero internet permissions. Just follow the 3 quick steps on my checklist below!'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* 3-Step Visual Setup Guide */}
-                <View style={[styles.introSetupGuideCard, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surface }]}>
-                  <Text style={[styles.introSetupGuideHeader, { color: currentTheme.primary }]}>
-                    3-STEP ANDROID SETUP (TAKES 5 SECONDS)
-                  </Text>
-
-                  <View style={styles.introSetupStepItem}>
-                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>1</Text>
-                    </View>
-                    <Text style={styles.introSetupStepText}>
-                      Check consent below and tap Continue to Settings
-                    </Text>
-                  </View>
-
-                  <View style={styles.introSetupStepItem}>
-                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>2</Text>
-                    </View>
-                    <Text style={styles.introSetupStepText}>
-                      Look for Downloaded apps (or Installed services)
-                    </Text>
-                  </View>
-
-                  <View style={styles.introSetupStepItem}>
-                    <View style={[styles.introSetupStepNum, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
-                      <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>3</Text>
-                    </View>
-                    <Text style={styles.introSetupStepText}>
-                      Select ReelCount Tracker and toggle switch ON
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Celebratory Live Badge if connected */}
-                {prototypeStatus.serviceConnected && (
-                  <View style={[styles.introCelebrationCard, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+              {/* Polly Guidance / Celebration Card with Poke Action */}
+              <Pressable
+                onPress={handlePokePolly}
+                style={[
+                  styles.introMascotCardCompact,
+                  {
+                    backgroundColor: currentTheme.surfaceRaised,
+                    borderColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.border,
+                  },
+                ]}
+              >
+                <View style={styles.introMascotRow}>
+                  <Animated.View
+                    style={[
+                      styles.introMascotAvatarInteractiveWrap,
+                      {
+                        borderColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary,
+                        backgroundColor: currentTheme.glow,
+                        transform: [
+                          { scale: pollyScaleAnim },
+                          {
+                            rotate: pollyRotateAnim.interpolate({
+                              inputRange: [-1, 0, 1],
+                              outputRange: ['-12deg', '0deg', '12deg'],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  >
                     <Image
                       source={require('./src/assets/images/app_mascot.jpg')}
-                      style={styles.introCelebrationMascot}
+                      style={styles.introMascotAvatarInteractive}
                       resizeMode="cover"
                     />
-                    <View style={styles.introCelebrationCol}>
-                      <Text style={[styles.introCelebrationTitle, { color: currentTheme.primary }]}>
-                        Polly is Calibrated & Live Active!
+                    <View style={[styles.introMascotStatusDot, { backgroundColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]} />
+                  </Animated.View>
+                  <View style={styles.introMascotSpeechWrap}>
+                    <View style={styles.introMascotHeaderRow}>
+                      <Text style={[styles.introMascotName, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
+                        {prototypeStatus.serviceConnected ? 'Polly · Ready & Calibrated!' : "Polly's Setup Checklist"}
                       </Text>
-                      <Text style={styles.introCelebrationSub}>
-                        ReelCount is quietly protecting your attention 100% on-device.
-                      </Text>
+                      <View style={[styles.introMascotPill, { backgroundColor: prototypeStatus.serviceConnected ? 'rgba(56, 211, 159, 0.15)' : currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                        <Text style={[styles.introMascotPillText, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
+                          {prototypeStatus.serviceConnected ? 'ALL CHECKS GREEN' : '100% PRIVATE'}
+                        </Text>
+                      </View>
                     </View>
+                    <Text style={styles.introMascotSpeech}>
+                      {prototypeStatus.serviceConnected
+                        ? 'My checklist is complete! On-device tracking is live, private, and running smoothly. Welcome to your Sanctuary!'
+                        : 'I run 100% on your device with zero internet permissions. Just follow the 3 quick steps on my checklist below!'}
+                    </Text>
                   </View>
-                )}
+                </View>
+              </Pressable>
 
-                {/* Service Status Badge */}
-                <View style={styles.statusSection} accessibilityLiveRegion="polite">
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      prototypeStatus.serviceConnected
-                        ? [styles.statusBadgeActive, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]
-                        : styles.statusBadgeInactive,
-                    ]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <AppIcon name={prototypeStatus.serviceConnected ? 'check' : 'alert'} size={14} color={prototypeStatus.serviceConnected ? currentTheme.primary : '#a0a0a0'} />
-                      <Text
-                        style={[
-                          styles.statusBadgeText,
-                          prototypeStatus.serviceConnected
-                            ? [styles.statusBadgeTextActive, { color: currentTheme.primary }]
-                            : styles.statusBadgeTextInactive,
-                        ]}
-                      >
-                        {prototypeStatus.serviceConnected
-                          ? 'Accessibility Service Connected'
-                          : 'Service Not Enabled'}
-                      </Text>
-                    </View>
+              {/* 3-Step Visual Setup Guide */}
+              <View style={[styles.introSetupGuideCardCompact, { borderColor: currentTheme.hairline, backgroundColor: currentTheme.surfaceRaised }]}>
+                <Text style={[styles.introSetupGuideHeader, { color: currentTheme.primary }]}>
+                  3-STEP ANDROID SETUP (TAKES 5 SECONDS)
+                </Text>
+
+                <View style={styles.introSetupStepItemCompact}>
+                  <View style={[styles.introSetupStepNumCompact, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                    <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>1</Text>
                   </View>
-                  <Text style={styles.body}>
-                    Session scroll events detected: {prototypeStatus.candidateCount}
+                  <Text style={styles.introSetupStepTextCompact}>
+                    Check consent below and tap Continue to Settings
                   </Text>
                 </View>
 
-                {/* Consent Checkbox */}
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: consentGiven }}
-                  onPress={() => setConsentGiven(value => !value)}
-                  style={styles.consentRow}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      consentGiven && [styles.checkboxChecked, { backgroundColor: currentTheme.primary, borderColor: currentTheme.primary }],
-                    ]}
-                  >
-                    {consentGiven ? <AppIcon name="check" size={12} color="#000000" /> : null}
+                <View style={styles.introSetupStepItemCompact}>
+                  <View style={[styles.introSetupStepNumCompact, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                    <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>2</Text>
                   </View>
-                  <Text style={styles.consentText}>
-                    I understand ReelCount operates 100% locally on-device and choose to continue to Android accessibility settings.
+                  <Text style={styles.introSetupStepTextCompact}>
+                    Look for Downloaded apps (or Installed services)
                   </Text>
-                </Pressable>
+                </View>
 
-                {/* Primary Button */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !consentGiven }}
-                  disabled={!consentGiven}
-                  onPress={continueToSettings}
+                <View style={styles.introSetupStepItemCompact}>
+                  <View style={[styles.introSetupStepNumCompact, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                    <Text style={[styles.introSetupStepNumText, { color: currentTheme.primary }]}>3</Text>
+                  </View>
+                  <Text style={styles.introSetupStepTextCompact}>
+                    Select ReelCount Tracker and toggle switch ON
+                  </Text>
+                </View>
+              </View>
+
+              {/* Service Status Badge */}
+              <View style={styles.statusSectionCompact} accessibilityLiveRegion="polite">
+                <View
                   style={[
-                    styles.button,
-                    consentGiven
-                      ? [styles.buttonConsentActive, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]
-                      : styles.buttonConsentDisabled,
-                    !consentGiven && styles.buttonDisabled,
+                    styles.statusBadge,
+                    prototypeStatus.serviceConnected
+                      ? [styles.statusBadgeActive, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]
+                      : styles.statusBadgeInactive,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      consentGiven
-                        ? [styles.buttonTextConsentActive, { color: currentTheme.actionText }]
-                        : styles.buttonTextConsentDisabled,
-                    ]}
-                  >
-                    {prototypeStatus.serviceConnected
-                      ? 'Manage Accessibility Settings'
-                      : 'Continue to Accessibility Settings'}
-                  </Text>
-                </Pressable>
-
-                {settingsError ? (
-                  <Text accessibilityRole="alert" style={styles.error}>
-                    Android accessibility settings could not be opened. Please enable manually in Android Settings.
-                  </Text>
-                ) : null}
-
-                {/* Dashboard button */}
-                <Pressable
-                  onPress={handleEnterDashboard}
-                  style={[styles.enterDashboardButton, { borderColor: currentTheme.hairline }]}
-                >
-                  <Text style={[styles.enterDashboardButtonText, { color: currentTheme.primary }]}>
-                    {prototypeStatus.serviceConnected ? 'Enter Sanctuary Dashboard →' : 'Skip to Dashboard →'}
-                  </Text>
-                </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <AppIcon
+                      name={prototypeStatus.serviceConnected ? 'check' : 'alert'}
+                      size={13}
+                      color={prototypeStatus.serviceConnected ? currentTheme.primary : '#a0a0a0'}
+                    />
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        prototypeStatus.serviceConnected
+                          ? [styles.statusBadgeTextActive, { color: currentTheme.primary }]
+                          : styles.statusBadgeTextInactive,
+                      ]}
+                    >
+                      {prototypeStatus.serviceConnected
+                        ? 'Accessibility Service Connected'
+                        : 'Service Not Enabled'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.bodyCompact}>
+                  Session scroll events detected: {prototypeStatus.candidateCount}
+                </Text>
               </View>
+
+              {/* Consent Checkbox */}
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consentGiven }}
+                onPress={() => setConsentGiven(value => !value)}
+                style={styles.consentRowCompact}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    consentGiven && [styles.checkboxChecked, { backgroundColor: currentTheme.primary, borderColor: currentTheme.primary }],
+                  ]}
+                >
+                  {consentGiven ? <AppIcon name="check" size={12} color="#000000" /> : null}
+                </View>
+                <Text style={styles.consentTextCompact}>
+                  I understand ReelCount operates 100% locally on-device and choose to continue to Android accessibility settings.
+                </Text>
+              </Pressable>
+
+              {/* Primary Action Button */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !consentGiven }}
+                disabled={!consentGiven}
+                onPress={continueToSettings}
+                style={[
+                  styles.buttonCompact,
+                  consentGiven
+                    ? [styles.buttonConsentActive, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]
+                    : styles.buttonConsentDisabled,
+                  !consentGiven && styles.buttonDisabled,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    consentGiven
+                      ? [styles.buttonTextConsentActive, { color: currentTheme.actionText }]
+                      : styles.buttonTextConsentDisabled,
+                  ]}
+                >
+                  {prototypeStatus.serviceConnected
+                    ? 'Manage Accessibility Settings'
+                    : 'Continue to Accessibility Settings'}
+                </Text>
+              </Pressable>
+
+              {settingsError ? (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  Android accessibility settings could not be opened. Please enable manually in Android Settings.
+                </Text>
+              ) : null}
+
+              {/* Secondary Dashboard button */}
+              <Pressable
+                onPress={handleEnterDashboard}
+                style={[styles.enterDashboardButtonCompact, { borderColor: currentTheme.hairline }]}
+              >
+                <Text style={[styles.enterDashboardButtonText, { color: currentTheme.primary }]}>
+                  {prototypeStatus.serviceConnected ? 'Enter Sanctuary Dashboard →' : 'Skip to Dashboard →'}
+                </Text>
+              </Pressable>
             </View>
-          </ScrollView>
+          </View>
         </ScrollView>
 
         {/* Bottom Carousel Controls (Dots + Navigation) */}
@@ -2831,6 +3001,12 @@ function App() {
     dailyLimit,
     dailyTimeLimitMin,
     goToIntroSlide,
+    pollyTipIndex,
+    introSoundscapeActive,
+    handlePokePolly,
+    handleToggleIntroSoundscape,
+    pollyRotateAnim,
+    pollyScaleAnim,
   ]);
   const renderIntroScreen = () => memoizedIntroScreen;
 
@@ -5687,7 +5863,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.32</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.33</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -7279,6 +7455,249 @@ const styles = StyleSheet.create({
   },
   introPager: {
     flex: 1,
+  },
+  introSlideCardFixed: {
+    flex: 1,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+    backgroundColor: '#0b0e0c',
+  },
+  introSlideHeaderCompact: {
+    marginBottom: 4,
+  },
+  introSlideTitleCompact: {
+    color: '#f1f5f3',
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+    marginBottom: 2,
+  },
+  introSlideSubtitleCompact: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: '#8aa395',
+  },
+  introInteractivePollyCard: {
+    borderRadius: 16,
+    borderWidth: 1.2,
+    padding: 10,
+    marginVertical: 4,
+  },
+  introPollyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  introMascotAvatarInteractiveWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  introMascotAvatarInteractive: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  introMascotPokeHintPill: {
+    position: 'absolute',
+    bottom: -4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  introMascotPokeHintText: {
+    color: '#000000',
+    fontSize: 8,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  introPollySpeechBubble: {
+    flex: 1,
+  },
+  introInteractiveSectionCompact: {
+    marginVertical: 4,
+  },
+  introSelectedBoundaryTag: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  introGoalOptionCardCompact: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  introBoundaryAdviceCard: {
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginVertical: 2,
+  },
+  introBoundaryAdviceTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  introBoundaryAdviceBody: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  introChipRowCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  introHudSimulatorCardCompact: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    marginVertical: 4,
+  },
+  introHudSimStageCompact: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#050706',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  introHudPreviewPillCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: 'rgba(10, 15, 12, 0.95)',
+  },
+  introHudMascotMiniWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  introHudMascotMini: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  introHudExpressionPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  introHudExpressionText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  introMascotCardCompact: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    marginVertical: 4,
+  },
+  introShieldsBoxCompact: {
+    marginVertical: 4,
+  },
+  introShieldRowCompact: {
+    padding: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  introSoundscapeDemoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  introSoundscapeDemoText: {
+    fontSize: 11,
+    fontWeight: '700',
+    flex: 1,
+    marginLeft: 8,
+  },
+  introSoundscapePill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  introSoundscapePillText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  introSetupGuideCardCompact: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 8,
+    marginVertical: 4,
+  },
+  introSetupStepItemCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  introSetupStepNumCompact: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introSetupStepTextCompact: {
+    color: '#8aa395',
+    fontSize: 11,
+    flex: 1,
+    lineHeight: 15,
+  },
+  statusSectionCompact: {
+    marginVertical: 3,
+  },
+  bodyCompact: {
+    color: '#8aa395',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  consentRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 4,
+  },
+  consentTextCompact: {
+    color: '#8aa395',
+    fontSize: 10,
+    flex: 1,
+    lineHeight: 14,
+  },
+  buttonCompact: {
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  enterDashboardButtonCompact: {
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginTop: 3,
   },
   introSlideContent: {
     paddingHorizontal: 16,
