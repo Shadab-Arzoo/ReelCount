@@ -477,3 +477,126 @@ test('supports in-feed neuro-interventions, deeper Polly mascot integration, and
 
   await ReactTestRenderer.act(() => renderer!.unmount());
 });
+
+test('supports liquid dock gestures: tap, long-press shortcuts, and scrubbing across tabs', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer | null = null;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+  });
+
+  // Skip intro to enter dashboard
+  const skipTextNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'Skip →');
+  expect(skipTextNode).toBeDefined();
+
+  let skipButton = skipTextNode!.parent;
+  while (skipButton && !skipButton.props.onPress) {
+    skipButton = skipButton.parent;
+  }
+  expect(skipButton).toBeDefined();
+  await ReactTestRenderer.act(() => skipButton!.props.onPress());
+
+  // Enter dashboard
+  const enterBtnText = renderer!.root
+    .findAllByType(Text)
+    .find(
+      node =>
+        typeof node.props.children === 'string' &&
+        node.props.children.includes('Dashboard →'),
+    );
+  expect(enterBtnText).toBeDefined();
+
+  let enterBtn = enterBtnText!.parent;
+  while (enterBtn && !enterBtn.props.onPress) {
+    enterBtn = enterBtn.parent;
+  }
+  expect(enterBtn).toBeDefined();
+  await ReactTestRenderer.act(() => enterBtn!.props.onPress());
+
+  const liquidDock = renderer!.root.findByProps({ testID: 'liquid-dock' });
+  expect(liquidDock).toBeDefined();
+
+  const createSyntheticPanEvent = (x: number, y: number, startX = x, startY = y) => {
+    const now = Date.now();
+    return {
+      nativeEvent: {
+        pageX: x,
+        pageY: y,
+        locationX: x,
+        locationY: y,
+        touches: [{ pageX: x, pageY: y, identifier: 0, timestamp: now }],
+        changedTouches: [{ pageX: x, pageY: y, identifier: 0, timestamp: now }],
+      },
+      touchHistory: {
+        mostRecentTimeStamp: now,
+        touchBank: [
+          {
+            touchActive: true,
+            startPageX: startX,
+            startPageY: startY,
+            startTimeStamp: now,
+            currentPageX: x,
+            currentPageY: y,
+            currentTimeStamp: now,
+            previousPageX: startX,
+            previousPageY: startY,
+            previousTimeStamp: now,
+          },
+        ],
+        numberActiveTouches: 1,
+        indexOfSingleActiveTouch: 0,
+      },
+    };
+  };
+
+  // 1. Long-press on dock slot 0 (Dashboard) without moving
+  await ReactTestRenderer.act(async () => {
+    liquidDock.props.onResponderGrant(createSyntheticPanEvent(50, 650));
+  });
+
+  // Wait 500ms for long-press timer to fire
+  await ReactTestRenderer.act(async () => {
+    await new Promise(resolve => setTimeout(() => resolve(true), 600));
+  });
+
+  // Verify Quick Shortcuts menu opened for Dashboard
+  let allTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(allTexts).toContain('Quick Shortcuts');
+
+  // 2. Start moving / scrubbing across dock towards Focus tab (slot 2, screenX ≈ 450)
+  // Moving should automatically dismiss the quick shortcuts menu and enter scrubbing mode
+  await ReactTestRenderer.act(async () => {
+    liquidDock.props.onResponderMove(createSyntheticPanEvent(450, 650, 50, 650));
+  });
+
+  allTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(allTexts).not.toContain('Quick Shortcuts');
+
+  // 3. Release finger at slot 2 (Focus)
+  await ReactTestRenderer.act(async () => {
+    liquidDock.props.onResponderRelease(createSyntheticPanEvent(450, 650, 50, 650));
+  });
+
+  // Verify tab switched to Focus (contains In-Feed Neuro-Interventions)
+  const focusTexts = renderer!.root
+    .findAllByType(Text)
+    .map(node => node.props.children)
+    .flat(Infinity)
+    .join(' ');
+  expect(focusTexts).toContain('In-Feed Neuro-Interventions');
+
+  await ReactTestRenderer.act(async () => {
+    await Promise.resolve();
+    renderer!.unmount();
+  });
+});

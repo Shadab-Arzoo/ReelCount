@@ -641,12 +641,13 @@ function App() {
   const dockLeftRef = useRef(14);
   const dockWrapRef = useRef<any>(null);
 
-  const getDockRelativeX = (screenX?: number, evtLocationX?: number): number => {
-    if (evtLocationX !== undefined && evtLocationX !== null && !isNaN(evtLocationX) && evtLocationX >= 0) {
-      return Math.max(0, Math.min(dockWidthRef.current, evtLocationX));
-    }
+  const getDockRelativeX = (screenX?: number, fallbackX?: number): number => {
+    const dockLeft = dockLeftRef.current > 0 ? dockLeftRef.current : Math.max(0, (windowWidth - dockWidthRef.current) / 2);
     if (screenX !== undefined && screenX !== null && !isNaN(screenX) && screenX > 0) {
-      return Math.max(0, Math.min(dockWidthRef.current, screenX - dockLeftRef.current));
+      return Math.max(0, Math.min(dockWidthRef.current, screenX - dockLeft));
+    }
+    if (fallbackX !== undefined && fallbackX !== null && !isNaN(fallbackX) && fallbackX >= 0) {
+      return Math.max(0, Math.min(dockWidthRef.current, fallbackX));
     }
     return dockWidthRef.current / 2;
   };
@@ -721,11 +722,22 @@ function App() {
 
   // Long-Press Quick Action Palette
   const [quickActionTab, setQuickActionTab] = useState<number | null>(null);
+  const quickActionTabRef = useRef<number | null>(null);
   const quickActionScale = useRef(new Animated.Value(0)).current;
   const quickActionOpacity = useRef(new Animated.Value(0)).current;
   const longPressTimerRef = useRef<any>(null);
+  const didLongPressRef = useRef(false);
+  const initialTouchedTabIdxRef = useRef<number>(0);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  const closeQuickActions = () => {
+  const closeQuickActions = (immediate?: boolean | unknown) => {
+    quickActionTabRef.current = null;
+    if (immediate === true) {
+      quickActionOpacity.setValue(0);
+      quickActionScale.setValue(0.8);
+      setQuickActionTab(null);
+      return;
+    }
     Animated.parallel([
       Animated.timing(quickActionOpacity, {
         toValue: 0,
@@ -744,6 +756,7 @@ function App() {
     try {
       Vibration.vibrate([0, 15, 30, 20]);
     } catch {}
+    quickActionTabRef.current = idx;
     setQuickActionTab(idx);
     quickActionScale.setValue(0.75);
     quickActionOpacity.setValue(0);
@@ -1127,29 +1140,41 @@ function App() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+        Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gesture) => {
         isDragActiveRef.current = true;
         hasScrubbedRef.current = false;
+        didLongPressRef.current = false;
         setIsDraggingDock(true);
 
-        // Cancel any pending long-press quick action timer when pan starts
+        const screenX = gesture?.x0 ?? evt?.nativeEvent?.pageX;
+        const screenY = gesture?.y0 ?? evt?.nativeEvent?.pageY;
+        touchStartPosRef.current = { x: screenX, y: screenY };
+
+        const dockX = getDockRelativeX(screenX, evt?.nativeEvent?.locationX);
+        const idx = getTabIndexFromDockX(dockX);
+
+        initialTouchedTabIdxRef.current = idx;
+        currentHoveredIdxRef.current = idx;
+        setHoveredTabIndex(idx);
+
+        // Schedule long-press quick action timer (450ms)
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
         }
-
-        const screenX = gesture.x0 || evt.nativeEvent.pageX;
-        const dockX = getDockRelativeX(screenX, evt.nativeEvent.locationX);
-        const idx = getTabIndexFromDockX(dockX);
-
-        currentHoveredIdxRef.current = idx;
-        setHoveredTabIndex(idx);
+        longPressTimerRef.current = setTimeout(() => {
+          // Fire quick actions ONLY if finger hasn't scrubbed/moved away
+          if (!hasScrubbedRef.current && isDragActiveRef.current) {
+            didLongPressRef.current = true;
+            openQuickActions(idx);
+          }
+        }, 450);
 
         // Touch ripple animation inside dock using native animated driver
         rippleX.setValue(dockX);
-        rippleY.setValue(evt.nativeEvent.locationY || 35);
+        rippleY.setValue(evt?.nativeEvent?.locationY || 35);
         rippleAnim.setValue(0);
         rippleOpacity.setValue(0.5);
         Animated.parallel([
@@ -1178,20 +1203,33 @@ function App() {
       onPanResponderMove: (evt, gesture) => {
         if (!isDragActiveRef.current) return;
 
-        if (Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3) {
+        const screenX =
+          gesture?.moveX ||
+          (gesture && gesture.x0 !== undefined ? gesture.x0 + gesture.dx : undefined) ||
+          evt?.nativeEvent?.pageX;
+        const currentX = screenX !== undefined ? screenX : 0;
+        const startX = touchStartPosRef.current?.x ?? (gesture?.x0 ?? currentX);
+        const diffX = Math.abs(currentX - startX);
+        const moveDistance = Math.max(Math.hypot(gesture?.dx || 0, gesture?.dy || 0), diffX);
+
+        if (moveDistance > 8) {
           hasScrubbedRef.current = true;
-          // Kill long-press timer the moment scrubbing motion is detected
+
+          // Kill long-press timer immediately when scrubbing motion starts
           if (longPressTimerRef.current) {
             clearTimeout(longPressTimerRef.current);
             longPressTimerRef.current = null;
           }
+
+          // If the quick actions palette was opened (user held and now moves to scrub),
+          // dismiss it immediately so scrubbing is unobstructed
+          if (quickActionTabRef.current !== null || didLongPressRef.current) {
+            closeQuickActions(true);
+            didLongPressRef.current = false;
+          }
         }
 
-        const screenX =
-          gesture.moveX ||
-          (gesture.x0 + gesture.dx) ||
-          evt.nativeEvent.pageX;
-        const dockX = getDockRelativeX(screenX, evt.nativeEvent.locationX);
+        const dockX = getDockRelativeX(screenX, evt?.nativeEvent?.locationX);
         const idx = getTabIndexFromDockX(dockX);
         const fractionalPos = getFractionalPosFromDockX(dockX);
 
@@ -1214,16 +1252,16 @@ function App() {
             ]).start();
           }
 
-          // Direct fluid tracking for Slider & Tooltip right under thumb (0ms latency, 0 physics contention)
+          // Direct fluid tracking for Slider & Tooltip right under thumb (0ms latency)
           sliderAnim.setValue(fractionalPos);
           tooltipX.setValue(fractionalPos);
 
           // Dynamic Mercury Stretch based on horizontal sliding speed
-          const speedStretch = Math.min(1.24, 1.0 + Math.abs(gesture.vx || 0) * 0.15);
+          const speedStretch = Math.min(1.24, 1.0 + Math.abs(gesture?.vx || 0) * 0.15);
           sliderScaleX.setValue(speedStretch);
 
           // Continuous fisheye magnification as thumb scrubs left and right
-          applyContinuousFisheye(dockX, gesture.vx || 0);
+          applyContinuousFisheye(dockX, gesture?.vx || 0);
 
           if (idx !== currentHoveredIdxRef.current) {
             currentHoveredIdxRef.current = idx;
@@ -1233,18 +1271,30 @@ function App() {
         }
       },
       onPanResponderRelease: (evt, gesture) => {
-        isDragActiveRef.current = false;
-        hasScrubbedRef.current = false;
-        setIsDraggingDock(false);
-        tooltipVisibleRef.current = false;
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
 
         const screenX =
           gesture?.moveX ||
-          (gesture ? gesture.x0 + gesture.dx : undefined) ||
+          (gesture && gesture.x0 !== undefined ? gesture.x0 + gesture.dx : undefined) ||
           evt?.nativeEvent?.pageX;
+        const currentX = screenX !== undefined ? screenX : 0;
+        const startX = touchStartPosRef.current?.x ?? (gesture?.x0 ?? currentX);
+        const diffX = Math.abs(currentX - startX);
+        const wasScrubbing = hasScrubbedRef.current || diffX > 8;
+        const wasLongPress = didLongPressRef.current && !wasScrubbing;
+
+        isDragActiveRef.current = false;
+        hasScrubbedRef.current = false;
+        didLongPressRef.current = false;
+        setIsDraggingDock(false);
+        tooltipVisibleRef.current = false;
+
         const dockX = getDockRelativeX(screenX, evt?.nativeEvent?.locationX);
         const finalIdx =
-          currentHoveredIdxRef.current !== null && currentHoveredIdxRef.current !== undefined
+          currentHoveredIdxRef.current !== null && currentHoveredIdxRef.current !== undefined && wasScrubbing
             ? currentHoveredIdxRef.current
             : getTabIndexFromDockX(dockX);
 
@@ -1264,11 +1314,33 @@ function App() {
           }),
         ]).start();
 
-        animateTabSelection(finalIdx);
+        // Release 3D compression with spring back
+        Animated.spring(dockScale, {
+          toValue: 1.0,
+          friction: 6,
+          tension: 140,
+          useNativeDriver: true,
+        }).start();
+
+        if (wasScrubbing) {
+          // User scrubbed across dock and released onto target tab
+          animateTabSelection(finalIdx);
+        } else if (wasLongPress) {
+          // User held still for >450ms; shortcuts palette is open, keep current tab
+        } else {
+          // Quick tap -> switch to tapped tab
+          const tapIdx = initialTouchedTabIdxRef.current ?? finalIdx;
+          animateTabSelection(tapIdx);
+        }
       },
       onPanResponderTerminate: () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
         isDragActiveRef.current = false;
         hasScrubbedRef.current = false;
+        didLongPressRef.current = false;
         setIsDraggingDock(false);
         tooltipVisibleRef.current = false;
         setHoveredTabIndex(null);
@@ -1283,7 +1355,7 @@ function App() {
 
         Animated.timing(tooltipOpacity, {
           toValue: 0,
-          duration: 160,
+          duration: 120,
           useNativeDriver: true,
         }).start();
 
@@ -1303,7 +1375,7 @@ function App() {
 
         resetDockRestingState(activeIdx);
       },
-    }),
+    })
   ).current;
 
   // Mindful Box Breathing Scale Animation in Craving Modal
@@ -5615,7 +5687,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.30</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.31</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -5920,24 +5992,11 @@ function App() {
                       accessibilityRole="tab"
                       accessibilityLabel={tab.label}
                       accessibilityState={{ selected: isTabActive }}
-                      onTouchStart={() => {
-                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                        longPressTimerRef.current = setTimeout(() => {
-                          // Only open quick actions if user hasn't started scrubbing/swiping
-                          if (!hasScrubbedRef.current && !isDragActiveRef.current) {
-                            openQuickActions(idx);
-                          }
-                        }, 450);
-                      }}
                       onTouchEnd={() => {
-                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-                        // Don't switch tabs if we were scrubbing — PanResponder handles that
-                        if (!hasScrubbedRef.current) {
+                        // Handled by dockPanResponder on physical device; retained for synthetic test environments
+                        if (!hasScrubbedRef.current && !isDragActiveRef.current) {
                           animateTabSelection(idx);
                         }
-                      }}
-                      onTouchCancel={() => {
-                        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
                       }}
                       style={[
                         styles.dockTabItem,
