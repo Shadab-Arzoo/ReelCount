@@ -300,6 +300,12 @@ class ReelCountPreferences private constructor(context: Context) {
     return prefs.getString(KEY_THEME_ACCENT, "mint") ?: "mint"
   }
 
+  fun setFixedFontEnabled(enabled: Boolean) {
+    prefs.edit().putBoolean(KEY_FIXED_FONT_ENABLED, enabled).apply()
+  }
+
+  fun isFixedFontEnabled(): Boolean = prefs.getBoolean(KEY_FIXED_FONT_ENABLED, false)
+
   // --- In-Feed Neuro-Interventions Preferences ---
 
   // 1. Grayscale Feed Filter
@@ -404,6 +410,7 @@ class ReelCountPreferences private constructor(context: Context) {
     private const val KEY_ZEN_XP = "zen_xp"
     private const val KEY_USER_INTENTION = "user_intention"
     private const val KEY_THEME_ACCENT = "theme_accent"
+    private const val KEY_FIXED_FONT_ENABLED = "fixed_font_enabled"
     private const val KEY_GRAYSCALE_FILTER_ENABLED = "grayscale_filter_enabled"
     private const val KEY_GRAYSCALE_TRIGGER_MODE = "grayscale_trigger_mode"
     private const val KEY_FIDGET_SWIPE_ENABLED = "fidget_swipe_enabled"

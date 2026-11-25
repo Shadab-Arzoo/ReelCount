@@ -13,11 +13,28 @@ import {
   Share,
   StatusBar,
   StyleSheet,
-  Text,
+  Text as RNText,
   useWindowDimensions,
   Vibration,
   View,
 } from 'react-native';
+
+const FontPreferenceContext = React.createContext<boolean>(false);
+
+const Text: React.FC<React.ComponentProps<typeof RNText>> = ({
+  allowFontScaling,
+  style,
+  ...rest
+}) => {
+  const fixedFont = React.useContext(FontPreferenceContext);
+  return (
+    <RNText
+      {...rest}
+      allowFontScaling={fixedFont ? false : allowFontScaling}
+      style={fixedFont ? [{ fontFamily: 'PollyFixedSans' }, style] : style}
+    />
+  );
+};
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon, type IconName } from './src/components/AppIcon';
 import PrototypeSettings, {
@@ -437,6 +454,7 @@ function App() {
   const [weeklyRecapAlert, setWeeklyRecapAlert] = useState(true);
   const [hudStyle, setHudStyle] = useState<HudStyle>('pill');
   const [themeAccent, setThemeAccent] = useState<ThemeAccent>('mint');
+  const [fixedFontEnabled, setFixedFontEnabled] = useState<boolean>(false);
   const [selectedIntention, setSelectedIntention] = useState<string>(
     'Deep Work First, Feeds Later',
   );
@@ -1518,7 +1536,8 @@ function App() {
               prev.hudStyle === status.hudStyle &&
               prev.bedtimeShieldEnabled === status.bedtimeShieldEnabled &&
               prev.themeAccent === status.themeAccent &&
-              prev.onboardingCompleted === status.onboardingCompleted
+              prev.onboardingCompleted === status.onboardingCompleted &&
+              prev.fixedFontEnabled === status.fixedFontEnabled
             ) {
               return prev;
             }
@@ -1642,6 +1661,11 @@ function App() {
           }
           if (status.drainingCount !== undefined) {
             setDrainingCount(status.drainingCount);
+          }
+          if (status.fixedFontEnabled !== undefined) {
+            setFixedFontEnabled(prev =>
+              prev !== status.fixedFontEnabled ? !!status.fixedFontEnabled : prev,
+            );
           }
 
           // Smart History Fetch: Only fetch history if candidateCount changed or on initial load
@@ -5794,6 +5818,84 @@ function App() {
         </View>
       </View>
 
+      {/* App Font Style Selection */}
+      <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
+        <View style={styles.cardHeaderWithAction}>
+          <View style={styles.cardHeaderTitleGroup}>
+            <AppIcon name="sparkle" size={19} color={currentTheme.primary} />
+            <Text style={styles.cardSectionTitle}>App Font Style</Text>
+          </View>
+          <View style={[styles.activeThemeBadgePill, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}>
+            <Text style={[styles.activeThemeBadgeText, { color: currentTheme.primary }]}>
+              {fixedFontEnabled ? 'Fixed Font' : 'Android Default'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.cardSubtitle}>
+          Lock the app to ReelCount's built-in fixed typeface and sizing instead of following the device's Android system font.
+        </Text>
+        <View style={styles.hudStyleSelectorRow}>
+          {[
+            {
+              id: 'default',
+              testID: 'font-mode-default',
+              fixed: false,
+              label: 'Android Default',
+              desc: 'Follow device font',
+              icon: 'settings' as IconName,
+            },
+            {
+              id: 'fixed',
+              testID: 'font-mode-fixed',
+              fixed: true,
+              label: 'Fixed App Font',
+              desc: 'Polly Sans · Locked',
+              icon: 'check' as IconName,
+            },
+          ].map(opt => {
+            const isSelected = fixedFontEnabled === opt.fixed;
+            return (
+              <Pressable
+                key={opt.id}
+                testID={opt.testID}
+                onPress={() => {
+                  triggerDockHaptic();
+                  setFixedFontEnabled(opt.fixed);
+                  PrototypeSettings.setFixedFontEnabled(opt.fixed).catch(() => {});
+                }}
+                style={[
+                  styles.hudStyleCard,
+                  isSelected && [
+                    styles.hudStyleCardSelected,
+                    { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
+                  ],
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 }}>
+                  <AppIcon
+                    name={opt.icon}
+                    size={14}
+                    color={isSelected ? currentTheme.primary : currentTheme.subtext}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.hudStyleLabel,
+                    isSelected && [
+                      styles.hudStyleLabelSelected,
+                      { color: currentTheme.primary },
+                    ],
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+                <Text style={styles.hudStyleDesc}>{opt.desc}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       {/* Privacy Guarantee */}
       <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }]}>
         <View style={styles.privacyHeaderRow}>
@@ -5863,7 +5965,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.38</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.40</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -5871,6 +5973,7 @@ function App() {
   }, [
     activeTab,
     themeAccent,
+    fixedFontEnabled,
     hudStyle,
     prototypeStatus,
     zenLevel,
@@ -5896,7 +5999,8 @@ function App() {
   const renderSettingsTab = () => memoizedSettingsTab;
 
   return (
-    <SafeAreaProvider>
+    <FontPreferenceContext.Provider value={fixedFontEnabled}>
+      <SafeAreaProvider>
       <SafeAreaView style={[styles.safeArea, { backgroundColor: currentTheme.background }]}>
         <StatusBar barStyle="light-content" />
 
@@ -6859,6 +6963,7 @@ function App() {
         </Modal>
       </SafeAreaView>
     </SafeAreaProvider>
+    </FontPreferenceContext.Provider>
   );
 }
 

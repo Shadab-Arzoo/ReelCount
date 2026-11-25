@@ -82,6 +82,7 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
       putBoolean("realityCheckEnabled", prefs.isRealityCheckEnabled())
       putInt("nourishingCount", prefs.getNourishingCount())
       putInt("drainingCount", prefs.getDrainingCount())
+      putBoolean("fixedFontEnabled", prefs.isFixedFontEnabled())
     }
     promise.resolve(result)
   }
@@ -352,6 +353,16 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
       promise.resolve(true)
     } catch (e: Exception) {
       promise.reject("THEME_ERROR", e.message, e)
+    }
+  }
+
+  @ReactMethod
+  fun setFixedFontEnabled(enabled: Boolean, promise: Promise) {
+    try {
+      prefs.setFixedFontEnabled(enabled)
+      promise.resolve(true)
+    } catch (e: Exception) {
+      promise.reject("FONT_ERROR", e.message, e)
     }
   }
 

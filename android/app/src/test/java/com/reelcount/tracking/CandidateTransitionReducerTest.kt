@@ -287,6 +287,115 @@ class CandidateTransitionReducerTest {
     assertTrue(reducer.reduce(reel3))
   }
 
+  @Test
+  fun progressiveMetadataLoadAndFadeOutDoNotDoubleCount() {
+    // Video binds creator first
+    assertTrue(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 1_000L,
+          reelFingerprint = "com.zhiliaoapp.musically:@alice"
+        )
+      )
+    )
+    // 300ms later audio and caption appear on the SAME video -> subset/superset suppresses double count
+    assertFalse(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 1_300L,
+          reelFingerprint = "com.zhiliaoapp.musically:@alice||Original Sound||Sunset"
+        )
+      )
+    )
+    // UI fades caption out leaving creator + audio -> still same video, MUST NOT count
+    assertFalse(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 4_000L,
+          reelFingerprint = "com.zhiliaoapp.musically:@alice||Original Sound"
+        )
+      )
+    )
+  }
+
+  @Test
+  fun marqueeUpdateWithoutScrollDoesNotDoubleCountSameCreatorWhileScrollToNextVideoDoes() {
+    assertTrue(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 1_000L,
+          reelFingerprint = "com.zhiliaoapp.musically:@creatorA||AudioPart1"
+        )
+      )
+    )
+    // Without any swipe scroll 3 seconds later, audio ticker mutates -> same creator without scroll = 0
+    assertFalse(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 4_000L,
+          reelFingerprint = "com.zhiliaoapp.musically:@creatorA||AudioPart2"
+        )
+      )
+    )
+    // Real user swipe scroll followed by next video on same creator's profile DOES count
+    assertFalse(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_VIEW_SCROLLED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 5_000L,
+          reelFingerprint = "com.zhiliaoapp.musically:@creatorA||AudioPart1"
+        )
+      )
+    )
+    assertTrue(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+          packageName = TargetPackages.TIKTOK,
+          timestamp = 5_350L,
+          reelFingerprint = "com.zhiliaoapp.musically:@creatorA||NextVideoAudio"
+        )
+      )
+    )
+  }
+
+  @Test
+  fun forwardPagerIndexAdvanceCountsEvenWithMatchingCreator() {
+    assertTrue(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_VIEW_SELECTED,
+          packageName = TargetPackages.INSTAGRAM,
+          timestamp = 1_000L,
+          reelFingerprint = "com.instagram.android:creator_x",
+          pagerIndex = 0
+        )
+      )
+    )
+    assertTrue(
+      reducer.reduce(
+        EventMetadata(
+          eventType = AccessibilityEvent.TYPE_VIEW_SELECTED,
+          packageName = TargetPackages.INSTAGRAM,
+          timestamp = 2_000L,
+          reelFingerprint = "com.instagram.android:creator_x",
+          pagerIndex = 1
+        )
+      )
+    )
+  }
+
   private fun event(type: Int, packageName: String, timestamp: Long) =
     EventMetadata(type, packageName, timestamp)
 }

@@ -9,10 +9,13 @@ import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Toast
 import com.reelcount.widget.PollyWidgetProvider
 import java.util.ArrayDeque
@@ -151,7 +154,10 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
     // 3. TARGET APP MONITORING & POST-SESSION REALITY CHECK
     if (packageName !in TargetPackages.all) {
-      if (currentActivePackage != null && packageName != applicationContext.packageName) {
+      if (packageName == applicationContext.packageName || packageName == "com.android.systemui") {
+        return
+      }
+      if (currentActivePackage != null) {
         val exitingPkg = currentActivePackage ?: ""
         val exitingLabel = TargetPackages.getDisplayLabel(exitingPkg)
         val elapsedMinutes = if (sessionStartTime > 0L) {
@@ -219,23 +225,21 @@ class ReelCountAccessibilityService : AccessibilityService() {
       event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
       event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
     ) {
-      try {
-        rootInActiveWindow
-      } catch (_: Exception) {
-        null
-      }
+      getWindowRootForPackage(packageName)
     } else {
       null
     }
 
+    val eventTimestamp = if (event.eventTime > 0L) event.eventTime else SystemClock.uptimeMillis()
     val detection = detector.detect(event, rootNode)
     val metadata = EventMetadata(
       eventType = event.eventType,
       packageName = packageName,
-      timestamp = event.eventTime,
+      timestamp = eventTimestamp,
       reelFingerprint = detection.fingerprint,
       isCommentInteraction = detection.isCommentSection,
-      isShortVideoActive = detection.isShortVideoActive
+      isShortVideoActive = detection.isShortVideoActive,
+      pagerIndex = detection.pagerIndex
     )
 
     if (trace.size == MAX_TRACE_EVENTS) trace.removeFirst()
@@ -326,6 +330,38 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
     handler.removeCallbacks(clearIdleState)
     handler.postDelayed(clearIdleState, TRACE_IDLE_TIMEOUT_MS)
+  }
+
+  private fun getWindowRootForPackage(packageName: String): AccessibilityNodeInfo? {
+    val activeRoot = try {
+      rootInActiveWindow
+    } catch (_: Exception) {
+      null
+    }
+    if (activeRoot != null && activeRoot.packageName?.toString() == packageName) {
+      return activeRoot
+    }
+
+    // Fallback: inspect interactive windows so overlays/PiP never hide the target app window tree
+    val appWindows = try {
+      windows
+    } catch (_: Exception) {
+      null
+    }
+    if (appWindows != null) {
+      for (window in appWindows.asReversed()) {
+        if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) continue
+        val root = try {
+          window.root
+        } catch (_: Exception) {
+          null
+        }
+        if (root != null && root.packageName?.toString() == packageName) {
+          return root
+        }
+      }
+    }
+    return activeRoot
   }
 
   private fun checkGrayscaleFeedFilter() {

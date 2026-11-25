@@ -40,6 +40,7 @@ export type PrototypeStatus = {
   realityCheckEnabled?: boolean;
   nourishingCount?: number;
   drainingCount?: number;
+  fixedFontEnabled?: boolean;
 };
 
 export type DayHistoryItem = {
@@ -88,6 +89,7 @@ type PrototypeSettingsModule = {
   setUserIntention(intention: string): Promise<boolean>;
   setUserMood(mood: string): Promise<boolean>;
   setThemeAccent(theme: string): Promise<boolean>;
+  setFixedFontEnabled(enabled: boolean): Promise<boolean>;
   setGrayscaleFilter(enabled: boolean, mode: string): Promise<boolean>;
   setFidgetSwipeDetector(enabled: boolean): Promise<boolean>;
   setConsciousExitEnabled(enabled: boolean): Promise<boolean>;
@@ -265,6 +267,12 @@ export default {
       return Promise.resolve(false);
     }
     return PrototypeSettings.setThemeAccent(theme);
+  },
+  setFixedFontEnabled(enabled: boolean): Promise<boolean> {
+    if (!PrototypeSettings?.setFixedFontEnabled) {
+      return Promise.resolve(false);
+    }
+    return PrototypeSettings.setFixedFontEnabled(enabled);
   },
   setGrayscaleFilter(enabled: boolean, mode: string = 'both'): Promise<boolean> {
     if (!PrototypeSettings?.setGrayscaleFilter) {

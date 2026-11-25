@@ -28,6 +28,7 @@ jest.mock('../src/native/PrototypeSettings', () => ({
     setDailyLimits: jest.fn().mockResolvedValue(true),
     resetCounters: jest.fn().mockResolvedValue(null),
     setThemeAccent: jest.fn().mockResolvedValue(true),
+    setFixedFontEnabled: jest.fn().mockResolvedValue(true),
     setOnboardingCompleted: jest.fn().mockResolvedValue(true),
     playSoundscape: jest.fn().mockResolvedValue(true),
     stopSoundscape: jest.fn().mockResolvedValue(true),
@@ -597,6 +598,52 @@ test('supports liquid dock gestures: tap, long-press shortcuts, and scrubbing ac
 
   await ReactTestRenderer.act(async () => {
     await Promise.resolve();
+    renderer!.unmount();
+  });
+});
+
+test('allows toggling fixed app font in Settings tab instead of Android default font', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+  });
+
+  // Skip intro -> Dashboard
+  const skipBtn = renderer!.root
+    .findAllByType(Text)
+    .find(n => n.props.children === 'Skip →')!.parent!;
+  let pressable = skipBtn;
+  while (pressable && !pressable.props.onPress) pressable = pressable.parent!;
+  await ReactTestRenderer.act(() => pressable!.props.onPress());
+
+  const enterBtnText = renderer!.root
+    .findAllByType(Text)
+    .find(n => typeof n.props.children === 'string' && n.props.children.includes('Dashboard →'))!;
+  let enterBtn = enterBtnText.parent!;
+  while (enterBtn && !enterBtn.props.onPress) enterBtn = enterBtn.parent!;
+  await ReactTestRenderer.act(() => enterBtn.props.onPress());
+
+  // Switch to Settings tab
+  const settingsTab = renderer!.root.findByProps({ testID: 'dock-tab-settings' });
+  await ReactTestRenderer.act(() => settingsTab.props.onTouchEnd());
+
+  // Find and tap Fixed App Font button
+  const fixedFontBtn = renderer!.root.findByProps({ testID: 'font-mode-fixed' });
+  expect(fixedFontBtn).toBeDefined();
+  await ReactTestRenderer.act(() => fixedFontBtn.props.onPress());
+
+  expect(PrototypeSettings.setFixedFontEnabled).toHaveBeenCalledWith(true);
+
+  // Verify Text nodes now enforce PollyFixedSans and locked scaling
+  const sampleText = renderer!.root
+    .findAllByType(Text)
+    .find(n => n.props.children === 'Fixed App Font');
+  expect(sampleText).toBeDefined();
+  expect(sampleText!.props.allowFontScaling).toBe(false);
+  expect(JSON.stringify(sampleText!.props.style)).toContain('PollyFixedSans');
+
+  await ReactTestRenderer.act(async () => {
     renderer!.unmount();
   });
 });
