@@ -4,8 +4,10 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.widget.Toast
+import com.reelcount.tracking.AmbientNotificationHelper
 import com.reelcount.tracking.ReelCountPreferences
 import com.reelcount.tracking.TargetPackages
+import com.reelcount.widget.PollyWidgetProvider
 
 /**
  * Android Quick Settings Notification Shade Tile.
@@ -27,13 +29,15 @@ class FocusTileService : TileService() {
     if (!currentlyActive) {
       // Activate 15-minute Focus Mode across all target packages
       prefs.setFocusMode(true, 15, TargetPackages.all)
-      Toast.makeText(this, "🔒 ReelCount: 15-minute Focus Mode Activated", Toast.LENGTH_SHORT).show()
+      Toast.makeText(this, "ReelCount: 15-minute Focus Mode Activated", Toast.LENGTH_SHORT).show()
     } else {
       // Deactivate Focus Mode
       prefs.setFocusMode(false, 0, emptySet())
       Toast.makeText(this, "ReelCount: Focus Mode Deactivated", Toast.LENGTH_SHORT).show()
     }
 
+    PollyWidgetProvider.updateAllWidgets(this)
+    AmbientNotificationHelper.updateStatusNotificationIfActive(this, prefs)
     updateTileState()
   }
 

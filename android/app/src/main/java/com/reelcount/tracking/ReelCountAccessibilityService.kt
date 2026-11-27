@@ -1,7 +1,6 @@
 package com.reelcount.tracking
 
 import android.accessibilityservice.AccessibilityService
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -39,6 +38,16 @@ class ReelCountAccessibilityService : AccessibilityService() {
   private val detector = ShortVideoDetector()
   private val handler = Handler(Looper.getMainLooper())
   private val clearIdleState = Runnable { clearIdleTrace() }
+  private val pollActiveWindowRunnable = object : Runnable {
+    override fun run() {
+      val activePkg = currentActivePackage ?: return
+      if (hasForegroundExitedTargetApp(activePkg)) {
+        handleTargetAppExited(System.currentTimeMillis())
+        return
+      }
+      handler.postDelayed(this, WINDOW_EXIT_POLL_MS)
+    }
+  }
 
   private var overlayHud: ReelCountOverlayHud? = null
   private var currentActivePackage: String? = null
@@ -158,32 +167,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
         return
       }
       if (currentActivePackage != null) {
-        val exitingPkg = currentActivePackage ?: ""
-        val exitingLabel = TargetPackages.getDisplayLabel(exitingPkg)
-        val elapsedMinutes = if (sessionStartTime > 0L) {
-          ((now - sessionStartTime) / 60_000L).toInt()
-        } else 0
-
-        // Post-Session Reality Check (3-Second Micro-Log) for 15+ minute sessions
-        if (prefs.isRealityCheckEnabled() && elapsedMinutes >= 15) {
-          overlayHud?.showRealityCheckCard(exitingLabel, elapsedMinutes) { rating ->
-            prefs.recordMicroLog(exitingLabel, elapsedMinutes, rating)
-            PollyWidgetProvider.updateAllWidgets(applicationContext)
-          }
-        }
-
-        overlayHud?.setGrayscaleOverlay(false)
-        if (isConsciousExitActive) {
-          isConsciousExitActive = false
-          handler.removeCallbacks(consciousExitRunnable)
-          overlayHud?.endConsciousExit()
-        }
-
-        currentActivePackage = null
-        consecutiveShortsInApp = 0
-        sessionStartTime = 0L
-        recentSwipeTimes.clear()
-        overlayHud?.hide()
+        handleTargetAppExited(now)
       }
       return
     }
@@ -195,6 +179,8 @@ class ReelCountAccessibilityService : AccessibilityService() {
       sessionStartTime = now
       recentSwipeTimes.clear()
       reducer.reset()
+      handler.removeCallbacks(pollActiveWindowRunnable)
+      handler.postDelayed(pollActiveWindowRunnable, WINDOW_EXIT_POLL_MS)
     }
 
     // Check & apply Grayscale Feed Filter
@@ -286,6 +272,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
       // "One Last Reel" Conscious Exit Contract
       if (isLimitHit) {
+        val notifiedLimit = maybeNotifyLimitReached(todayTotal, dailyLimit, currentPkgCount, pkgLimit, isPkgLimitHit, appLabel, now)
         if (prefs.isConsciousExitEnabled()) {
           if (!isConsciousExitActive) {
             isConsciousExitActive = true
@@ -301,19 +288,11 @@ class ReelCountAccessibilityService : AccessibilityService() {
                 Toast.LENGTH_LONG
               ).show()
             }
-          }
-        } else {
-          // Standard limit notifications if conscious exit is disabled
-          if (todayTotal == dailyLimit || (isPkgLimitHit && currentPkgCount == pkgLimit) || (now - lastLimitAlertTime > 180_000L)) {
-            lastLimitAlertTime = now
-            val notifTitle = if (isPkgLimitHit) appLabel else "Daily"
-            val notifLimit = if (isPkgLimitHit) pkgLimit else dailyLimit
-            val notifCount = if (isPkgLimitHit) currentPkgCount else todayTotal
-            sendLimitReachedNotification(notifCount, notifLimit, notifTitle)
-            triggerWarningVibration()
-          } else {
+          } else if (!notifiedLimit) {
             triggerTickVibration()
           }
+        } else if (!notifiedLimit) {
+          triggerTickVibration()
         }
       } else if (prefs.isDoomscrollAlertEnabled() && consecutiveShortsInApp >= 15 && (consecutiveShortsInApp % 10 == 5)) {
         if (now - lastDoomscrollAlertTime > 120_000L) {
@@ -383,84 +362,36 @@ class ReelCountAccessibilityService : AccessibilityService() {
   }
 
   private fun createNotificationChannels() {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val alertChannel = NotificationChannel(
-        CHANNEL_ID,
-        "ReelCount Alerts",
-        NotificationManager.IMPORTANCE_HIGH
-      ).apply {
-        description = "Daily limits, Doomscroll alerts, and Focus Mode reminders"
-        enableVibration(true)
-      }
-      val statusChannel = NotificationChannel(
-        CHANNEL_STATUS_ID,
-        "ReelCount Ambient Status",
-        NotificationManager.IMPORTANCE_LOW
-      ).apply {
-        description = "Live scroll counter & quick Focus button in notification shade"
-        enableVibration(false)
-        setShowBadge(false)
-      }
-      notificationManager?.createNotificationChannel(alertChannel)
-      notificationManager?.createNotificationChannel(statusChannel)
-    }
+    AmbientNotificationHelper.createChannels(this)
   }
 
   private fun updateAmbientStatusNotification() {
-    val nm = notificationManager ?: return
-    val total = prefs.getTodayCount()
-    val limit = prefs.getDailyShortLimit()
-    val percent = if (limit > 0) Math.min(100, (total * 100) / limit) else 0
-    val launchPendingIntent = getLaunchPendingIntent()
+    AmbientNotificationHelper.updateStatusNotification(this, prefs)
+  }
 
-    val focusIntent = Intent(this, com.reelcount.quicksettings.NotificationActionReceiver::class.java).apply {
-      action = com.reelcount.quicksettings.NotificationActionReceiver.ACTION_START_FOCUS
+  private fun maybeNotifyLimitReached(
+    todayTotal: Int,
+    dailyLimit: Int,
+    currentPkgCount: Int,
+    pkgLimit: Int,
+    isPkgLimitHit: Boolean,
+    appLabel: String,
+    now: Long
+  ): Boolean {
+    if (!prefs.isBreakReminderEnabled()) return false
+    if (todayTotal == dailyLimit || (isPkgLimitHit && currentPkgCount == pkgLimit) || (now - lastLimitAlertTime > 180_000L)) {
+      lastLimitAlertTime = now
+      val notifTitle = if (isPkgLimitHit) appLabel else "Daily"
+      val notifLimit = if (isPkgLimitHit) pkgLimit else dailyLimit
+      val notifCount = if (isPkgLimitHit) currentPkgCount else todayTotal
+      sendLimitReachedNotification(notifCount, notifLimit, notifTitle)
+      triggerWarningVibration()
+      return true
     }
-    val focusFlags = PendingIntent.FLAG_UPDATE_CURRENT or
-      (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-    val focusPendingIntent = PendingIntent.getBroadcast(this, 201, focusIntent, focusFlags)
-
-    try {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val builder = android.app.Notification.Builder(this, CHANNEL_STATUS_ID)
-          .setContentTitle("Polly: $total / $limit Shorts ($percent%)")
-          .setContentText("Tap to open Dashboard · Stay mindful")
-          .setSmallIcon(android.R.drawable.ic_menu_compass)
-          .setOngoing(true)
-          .setAutoCancel(false)
-
-        if (launchPendingIntent != null) {
-          builder.setContentIntent(launchPendingIntent)
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-          val icon = android.graphics.drawable.Icon.createWithResource(this, android.R.drawable.ic_lock_idle_lock)
-          val action = android.app.Notification.Action.Builder(icon, "Focus 15m", focusPendingIntent).build()
-          builder.addAction(action)
-        } else {
-          @Suppress("DEPRECATION")
-          builder.addAction(
-            android.R.drawable.ic_lock_idle_lock,
-            "Focus 15m",
-            focusPendingIntent
-          )
-        }
-
-        nm.notify(NOTIFICATION_STATUS_ID, builder.build())
-      }
-    } catch (_: Exception) {}
+    return false
   }
 
-  private fun getLaunchPendingIntent(): PendingIntent? {
-    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-    } ?: return null
-
-    val flags = PendingIntent.FLAG_UPDATE_CURRENT or
-      (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-
-    return PendingIntent.getActivity(this, 0, launchIntent, flags)
-  }
+  private fun getLaunchPendingIntent(): PendingIntent? = AmbientNotificationHelper.getLaunchPendingIntent(this)
 
   private fun sendLimitReachedNotification(total: Int, limit: Int, label: String = "Daily") {
     val nm = notificationManager ?: return
@@ -468,7 +399,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val title = if (label == "Daily") "Polly: Daily Limit Reached" else "Polly: $label Limit Reached"
-        val builder = android.app.Notification.Builder(this, CHANNEL_ID)
+        val builder = android.app.Notification.Builder(this, AmbientNotificationHelper.CHANNEL_ID)
           .setContentTitle(title)
           .setContentText("You've watched $total shorts (Limit: $limit). Tap to take a mindful break.")
           .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -488,7 +419,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     val pendingIntent = getLaunchPendingIntent()
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val builder = android.app.Notification.Builder(this, CHANNEL_ID)
+        val builder = android.app.Notification.Builder(this, AmbientNotificationHelper.CHANNEL_ID)
           .setContentTitle("Doomscroll Loop Warning")
           .setContentText("$consecutive shorts watched in a row on $appName. Take a 4-4-4 breathing reset!")
           .setSmallIcon(android.R.drawable.ic_popup_reminder)
@@ -554,8 +485,66 @@ class ReelCountAccessibilityService : AccessibilityService() {
     }
   }
 
+  private fun hasForegroundExitedTargetApp(activePkg: String): Boolean {
+    val appWindows = try {
+      windows
+    } catch (_: Exception) {
+      null
+    } ?: return false
+    if (appWindows.isEmpty()) return false
+
+    var targetAppVisible = false
+    var otherAppVisible = false
+    for (window in appWindows) {
+      if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) continue
+      val winPkg = try {
+        window.root?.packageName?.toString()
+      } catch (_: Exception) {
+        null
+      } ?: continue
+
+      if (winPkg == activePkg || winPkg in TargetPackages.all) {
+        targetAppVisible = true
+      } else {
+        otherAppVisible = true
+      }
+    }
+    return otherAppVisible && !targetAppVisible
+  }
+
+  private fun handleTargetAppExited(now: Long) {
+    handler.removeCallbacks(pollActiveWindowRunnable)
+    val exitingPkg = currentActivePackage ?: return
+    val exitingLabel = TargetPackages.getDisplayLabel(exitingPkg)
+    val elapsedMinutes = if (sessionStartTime > 0L) {
+      ((now - sessionStartTime) / 60_000L).toInt()
+    } else 0
+
+    // Post-Session Reality Check (3-Second Micro-Log) for 15+ minute sessions
+    if (prefs.isRealityCheckEnabled() && elapsedMinutes >= 15) {
+      overlayHud?.showRealityCheckCard(exitingLabel, elapsedMinutes) { rating ->
+        prefs.recordMicroLog(exitingLabel, elapsedMinutes, rating)
+        PollyWidgetProvider.updateAllWidgets(applicationContext)
+      }
+    }
+
+    overlayHud?.setGrayscaleOverlay(false)
+    if (isConsciousExitActive) {
+      isConsciousExitActive = false
+      handler.removeCallbacks(consciousExitRunnable)
+      overlayHud?.endConsciousExit()
+    }
+
+    currentActivePackage = null
+    consecutiveShortsInApp = 0
+    sessionStartTime = 0L
+    recentSwipeTimes.clear()
+    overlayHud?.hide()
+  }
+
   override fun onInterrupt() {
     handler.removeCallbacks(clearIdleState)
+    handler.removeCallbacks(pollActiveWindowRunnable)
     handler.removeCallbacks(consciousExitRunnable)
     trace.clear()
     reducer.reset()
@@ -580,6 +569,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
 
   private fun clearTransientState() {
     handler.removeCallbacks(clearIdleState)
+    handler.removeCallbacks(pollActiveWindowRunnable)
     handler.removeCallbacks(consciousExitRunnable)
     trace.clear()
     reducer.reset()
@@ -590,7 +580,7 @@ class ReelCountAccessibilityService : AccessibilityService() {
     overlayHud?.setGrayscaleOverlay(false)
     currentActivePackage = null
     try {
-      notificationManager?.cancel(NOTIFICATION_STATUS_ID)
+      notificationManager?.cancel(AmbientNotificationHelper.NOTIFICATION_STATUS_ID)
     } catch (_: Exception) {}
   }
 
@@ -604,10 +594,8 @@ class ReelCountAccessibilityService : AccessibilityService() {
   private companion object {
     const val MAX_TRACE_EVENTS = 32
     const val TRACE_IDLE_TIMEOUT_MS = 30_000L
-    const val CHANNEL_ID = "reelcount_alerts"
-    const val CHANNEL_STATUS_ID = "reelcount_status"
+    const val WINDOW_EXIT_POLL_MS = 1_500L
     const val NOTIFICATION_LIMIT_ID = 1001
     const val NOTIFICATION_DOOMSCROLL_ID = 1002
-    const val NOTIFICATION_STATUS_ID = 1003
   }
 }

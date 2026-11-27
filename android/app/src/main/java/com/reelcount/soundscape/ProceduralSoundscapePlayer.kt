@@ -55,6 +55,10 @@ object ProceduralSoundscapePlayer {
       AudioFormat.CHANNEL_OUT_MONO,
       AudioFormat.ENCODING_PCM_16BIT
     )
+    if (minBufSize <= 0) {
+      isPlaying = false
+      return
+    }
     val bufferSize = Math.max(minBufSize, BUFFER_SIZE_FRAMES * 2)
 
     val track = AudioTrack.Builder()
@@ -75,8 +79,21 @@ object ProceduralSoundscapePlayer {
       .setTransferMode(AudioTrack.MODE_STREAM)
       .build()
 
+    if (track.state != AudioTrack.STATE_INITIALIZED) {
+      try {
+        track.release()
+      } catch (_: Exception) {}
+      isPlaying = false
+      return
+    }
+
     audioTrack = track
-    track.play()
+    try {
+      track.play()
+    } catch (_: Exception) {
+      stopInternal()
+      return
+    }
 
     audioThread = Thread({
       generateAudioLoop(track, currentSoundscape)
@@ -94,6 +111,15 @@ object ProceduralSoundscapePlayer {
 
   private fun stopInternal() {
     isPlaying = false
+    val activeTrack = audioTrack
+    audioTrack = null
+    // Pause/flush/stop AudioTrack before joining worker thread so blocking write() unblocks immediately
+    try {
+      activeTrack?.pause()
+      activeTrack?.flush()
+      activeTrack?.stop()
+    } catch (_: Exception) {}
+
     try {
       audioThread?.interrupt()
       audioThread?.join(300)
@@ -101,10 +127,8 @@ object ProceduralSoundscapePlayer {
     audioThread = null
 
     try {
-      audioTrack?.stop()
-      audioTrack?.release()
+      activeTrack?.release()
     } catch (_: Exception) {}
-    audioTrack = null
   }
 
   fun isAudioPlaying(): Boolean = isPlaying

@@ -4,8 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import com.reelcount.tracking.AmbientNotificationHelper
 import com.reelcount.tracking.ReelCountPreferences
 import com.reelcount.tracking.TargetPackages
+import com.reelcount.widget.PollyWidgetProvider
 
 /**
  * BroadcastReceiver for handling interactive notification action buttons:
@@ -19,11 +21,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
     when (intent.action) {
       ACTION_START_FOCUS -> {
         prefs.setFocusMode(true, 15, TargetPackages.all)
-        Toast.makeText(context, "🔒 ReelCount: 15m Focus Session Started", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "ReelCount: 15m Focus Session Started", Toast.LENGTH_SHORT).show()
+        PollyWidgetProvider.updateAllWidgets(context)
+        AmbientNotificationHelper.updateStatusNotification(context, prefs)
       }
       ACTION_STOP_FOCUS -> {
         prefs.setFocusMode(false, 0, emptySet())
         Toast.makeText(context, "ReelCount: Focus Session Ended", Toast.LENGTH_SHORT).show()
+        PollyWidgetProvider.updateAllWidgets(context)
+        AmbientNotificationHelper.updateStatusNotification(context, prefs)
       }
     }
   }

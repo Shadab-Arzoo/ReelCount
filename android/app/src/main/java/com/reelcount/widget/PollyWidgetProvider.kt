@@ -11,6 +11,7 @@ import android.widget.RemoteViews
 import android.widget.Toast
 import com.reelcount.MainActivity
 import com.reelcount.R
+import com.reelcount.tracking.AmbientNotificationHelper
 import com.reelcount.tracking.ReelCountPreferences
 import com.reelcount.tracking.TargetPackages
 
@@ -40,6 +41,7 @@ class PollyWidgetProvider : AppWidgetProvider() {
         Toast.makeText(context, "Focus Sprint already active.", Toast.LENGTH_SHORT).show()
       }
       updateAllWidgets(context)
+      AmbientNotificationHelper.updateStatusNotificationIfActive(context, prefs)
     }
   }
 

@@ -100,6 +100,7 @@ class ReelCountPreferences private constructor(context: Context) {
     return newTotal
   }
 
+  @Synchronized
   fun getTodayCount(): Int {
     val today = getTodayKey()
     if (cachedTodayCount >= 0 && cachedHistoryDate == today) {
@@ -111,6 +112,7 @@ class ReelCountPreferences private constructor(context: Context) {
     return count
   }
 
+  @Synchronized
   fun getTodayPackageCount(packageName: String): Int {
     val today = getTodayKey()
     return prefs.getInt("count_${today}_$packageName", 0)
@@ -360,7 +362,8 @@ class ReelCountPreferences private constructor(context: Context) {
     val currentJson = prefs.getString(KEY_MICRO_LOGS_JSON, "[]") ?: "[]"
     val timestamp = System.currentTimeMillis()
     val cleanRating = if (rating.lowercase().contains("nourish")) "nourishing" else "draining"
-    val newEntry = "{\"timestamp\":$timestamp,\"appName\":\"$appName\",\"durationMinutes\":$durationMinutes,\"rating\":\"$cleanRating\"}"
+    val safeAppName = appName.replace("\\", "\\\\").replace("\"", "\\\"")
+    val newEntry = "{\"timestamp\":$timestamp,\"appName\":\"$safeAppName\",\"durationMinutes\":$durationMinutes,\"rating\":\"$cleanRating\"}"
     val updatedJson = if (currentJson.trim() == "[]") {
       "[$newEntry]"
     } else {
@@ -373,6 +376,10 @@ class ReelCountPreferences private constructor(context: Context) {
       .putString(KEY_MICRO_LOGS_JSON, updatedJson)
       .putInt(countKey, currentRatingCount)
       .apply()
+
+    if (cleanRating == "nourishing") {
+      addZenXp(10)
+    }
   }
 
   fun getMicroLogsJson(): String = prefs.getString(KEY_MICRO_LOGS_JSON, "[]") ?: "[]"

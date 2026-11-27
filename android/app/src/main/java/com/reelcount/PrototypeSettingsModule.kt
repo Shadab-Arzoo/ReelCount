@@ -176,6 +176,8 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
         }
       }
       prefs.setFocusMode(active, durationMinutes, pkgSet)
+      com.reelcount.widget.PollyWidgetProvider.updateAllWidgets(reactApplicationContext)
+      com.reelcount.tracking.AmbientNotificationHelper.updateStatusNotificationIfActive(reactApplicationContext, prefs)
       promise.resolve(true)
     } catch (e: Exception) {
       promise.reject("FOCUS_MODE_ERROR", e.message, e)
@@ -186,6 +188,8 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
   fun setDailyLimits(shortLimit: Int, timeLimitMinutes: Int, promise: Promise) {
     try {
       prefs.setDailyLimits(shortLimit, timeLimitMinutes)
+      com.reelcount.widget.PollyWidgetProvider.updateAllWidgets(reactApplicationContext)
+      com.reelcount.tracking.AmbientNotificationHelper.updateStatusNotificationIfActive(reactApplicationContext, prefs)
       promise.resolve(true)
     } catch (e: Exception) {
       promise.reject("LIMIT_ERROR", e.message, e)
@@ -343,6 +347,8 @@ class PrototypeSettingsModule(context: ReactApplicationContext) : ReactContextBa
   @ReactMethod
   fun resetCounters(promise: Promise) {
     PrototypeRuntimeStatus.reset(prefs)
+    com.reelcount.widget.PollyWidgetProvider.updateAllWidgets(reactApplicationContext)
+    com.reelcount.tracking.AmbientNotificationHelper.updateStatusNotificationIfActive(reactApplicationContext, prefs)
     promise.resolve(null)
   }
 

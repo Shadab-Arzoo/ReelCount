@@ -71,6 +71,8 @@ class ReelCountOverlayHud(private val context: Context) {
   private var isFidgetAlertActive = false
   private var isConsciousExitActive = false
   private var speedbumpActive = false
+  private val speedbumpRunnables = mutableListOf<Runnable>()
+  private var fidgetResetRunnable: Runnable? = null
 
   // Display cycle: 0 = Current App, 1 = Daily Total / Limit, 2 = Estimated Minutes
   private var displayCycleMode = 0
@@ -141,7 +143,7 @@ class ReelCountOverlayHud(private val context: Context) {
     val ring = GradientDrawable().apply {
       shape = GradientDrawable.OVAL
       setColor(Color.parseColor("#201A35"))
-      setStroke(dpToPx(2), Color.parseColor("#6EE3AD"))
+      setStroke(dpToPx(2), accent)
     }
     mascotRingDrawable = ring
 
@@ -281,7 +283,24 @@ class ReelCountOverlayHud(private val context: Context) {
     }
   }
 
+  private fun cancelSpeedbumpTimers() {
+    for (r in speedbumpRunnables) {
+      handler.removeCallbacks(r)
+    }
+    speedbumpRunnables.clear()
+    speedbumpActive = false
+  }
+
+  private fun cancelPendingOverlayTimers() {
+    cancelSpeedbumpTimers()
+    fidgetResetRunnable?.let { handler.removeCallbacks(it) }
+    fidgetResetRunnable = null
+    isFidgetAlertActive = false
+  }
+
   private fun triggerSpeedbump(appLabel: String, count: Int, limitReached: Boolean) {
+    cancelSpeedbumpTimers()
+
     speedbumpActive = true
     hudView?.visibility = View.VISIBLE
     isVisible = true
@@ -296,28 +315,31 @@ class ReelCountOverlayHud(private val context: Context) {
     mascotRingDrawable?.setStroke(dpToPx(2), accent)
     pulse()
 
-    handler.postDelayed({
+    val step2 = Runnable {
       if (speedbumpActive) {
         counterView?.text = "2s"
         pulse()
       }
-    }, 1000L)
-
-    handler.postDelayed({
+    }
+    val step1 = Runnable {
       if (speedbumpActive) {
         counterView?.text = "1s"
         pulse()
       }
-    }, 2000L)
-
-    handler.postDelayed({
+    }
+    val finish = Runnable {
       if (speedbumpActive) {
         speedbumpActive = false
+        speedbumpRunnables.clear()
         applyHudStyleVisibility(limitReached)
         updateContent(appLabel, count, limitReached)
         pulse()
       }
-    }, 3000L)
+    }
+    speedbumpRunnables.addAll(listOf(step2, step1, finish))
+    handler.postDelayed(step2, 1000L)
+    handler.postDelayed(step1, 2000L)
+    handler.postDelayed(finish, 3000L)
   }
 
   fun updateCount(appLabel: String, count: Int, limitReached: Boolean = false) {
@@ -326,7 +348,7 @@ class ReelCountOverlayHud(private val context: Context) {
       currentAppLabel = appLabel
       currentAppCount = count
       isCurrentLimitReached = limitReached
-      speedbumpActive = false
+      cancelSpeedbumpTimers()
       if (!isFidgetAlertActive && !isConsciousExitActive) {
         applyHudStyleVisibility(limitReached)
         updateContent(appLabel, count, limitReached)
@@ -342,6 +364,7 @@ class ReelCountOverlayHud(private val context: Context) {
   fun showFidgetAlert() {
     handler.post {
       ensureAttached()
+      fidgetResetRunnable?.let { handler.removeCallbacks(it) }
       isFidgetAlertActive = true
       hudView?.visibility = View.VISIBLE
       isVisible = true
@@ -355,11 +378,14 @@ class ReelCountOverlayHud(private val context: Context) {
       counterView?.setTextColor(Color.parseColor("#FFFFFF"))
       pulse(isWarning = true)
 
-      handler.postDelayed({
+      val resetTask = Runnable {
         isFidgetAlertActive = false
+        fidgetResetRunnable = null
         updateContent(currentAppLabel, currentAppCount, isCurrentLimitReached)
         pulse()
-      }, 4000L)
+      }
+      fidgetResetRunnable = resetTask
+      handler.postDelayed(resetTask, 4000L)
     }
   }
 
@@ -444,7 +470,7 @@ class ReelCountOverlayHud(private val context: Context) {
     // Determine Polly's expression mood ring color based on swipe count:
     val mascotColor = when {
       limitReached -> Color.parseColor("#EF4444")
-      todayTotal < 25 -> Color.parseColor("#6EE3AD") // Calm & Cheerful
+      todayTotal < 25 -> getThemeAccentColor() // Calm & Cheerful (follows Sanctuary theme)
       todayTotal < 50 -> Color.parseColor("#FBBF24") // Attentive
       else -> Color.parseColor("#FB7185")            // Sleepy / Concerned
     }
@@ -499,11 +525,12 @@ class ReelCountOverlayHud(private val context: Context) {
       if (isRealityCheckShowing || windowManager == null) return@post
       isRealityCheckShowing = true
 
+      val accent = getThemeAccentColor()
       val cardBg = GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
         cornerRadius = dpToPx(18).toFloat()
         setColor(Color.parseColor("#F012111A"))
-        setStroke(dpToPx(1.5f.toInt()), Color.parseColor("#6EE3AD"))
+        setStroke(dpToPx(1.5f.toInt()), accent)
       }
 
       val dialog = LinearLayout(context).apply {
@@ -534,7 +561,7 @@ class ReelCountOverlayHud(private val context: Context) {
 
       val headerText = TextView(context).apply {
         text = "POLLY · REALITY CHECK"
-        setTextColor(Color.parseColor("#6EE3AD"))
+        setTextColor(accent)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         letterSpacing = 0.08f
@@ -717,6 +744,7 @@ class ReelCountOverlayHud(private val context: Context) {
 
   fun hide() {
     handler.post {
+      cancelPendingOverlayTimers()
       if (isVisible) {
         hudView?.visibility = View.GONE
         isVisible = false
@@ -726,6 +754,7 @@ class ReelCountOverlayHud(private val context: Context) {
 
   fun destroy() {
     handler.post {
+      cancelPendingOverlayTimers()
       setGrayscaleOverlay(false)
       if (realityCheckView != null) {
         try { windowManager?.removeView(realityCheckView) } catch (_: Exception) {}

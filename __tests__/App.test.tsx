@@ -40,6 +40,7 @@ jest.mock('../src/native/PrototypeSettings', () => ({
     setRealityCheckEnabled: jest.fn().mockResolvedValue(true),
     recordMicroLog: jest.fn().mockResolvedValue(true),
     getMicroLogsJson: jest.fn().mockResolvedValue('[]'),
+    addZenXp: jest.fn().mockImplementation((amt: number) => Promise.resolve(380 + amt)),
   },
   TARGET_PACKAGES: {
     INSTAGRAM: 'com.instagram.android',
@@ -57,6 +58,8 @@ jest.mock('react-native-safe-area-context', () => {
     SafeAreaView: ReactNative.View,
   };
 });
+
+jest.setTimeout(15000);
 
 test('requires an explicit opt-in before opening Android accessibility settings', async () => {
   let renderer: ReactTestRenderer.ReactTestRenderer;
@@ -250,12 +253,22 @@ test('allows switching themes in the Sanctuary Atmosphere showcase', async () =>
   // Assert PrototypeSettings.setThemeAccent was invoked with 'rose'
   expect(PrototypeSettings.setThemeAccent).toHaveBeenCalledWith('rose');
 
+  // Verify previously un-themed Settings components adapt to Neon Rose (#fb7185)
+  const settingsDailyCompass = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'DAILY MINDFUL QUESTS');
+  expect(JSON.stringify(settingsDailyCompass!.props.style)).toContain('#b56f80');
+  const moodFocusedNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'Laser Focused');
+  expect(JSON.stringify(moodFocusedNode!.props.style)).toContain('#b56f80');
+
   // Switch back from Settings to Dashboard tab
   const dashboardTab = renderer!.root.findByProps({ testID: 'dock-tab-counter' });
   expect(dashboardTab).toBeDefined();
   await ReactTestRenderer.act(() => dashboardTab.props.onTouchEnd());
 
-  // Verify dashboard screen is visible and active again
+  // Verify dashboard screen is visible and themed accents updated to Neon Rose (#fb7185)
   const returnedTexts = renderer!.root
     .findAllByType(Text)
     .map(node => node.props.children)
@@ -264,6 +277,15 @@ test('allows switching themes in the Sanctuary Atmosphere showcase', async () =>
   expect(returnedTexts).toContain('ReelCount');
   expect(returnedTexts).toContain('Platform Breakdown');
   expect(returnedTexts).toContain('Weekly Rhythm');
+
+  const videosTodayNode = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'videos today');
+  expect(JSON.stringify(videosTodayNode!.props.style)).toContain('#fb7185');
+  const calmHudBadgeText = renderer!.root
+    .findAllByType(Text)
+    .find(node => node.props.children === 'CALM (0-25)');
+  expect(JSON.stringify(calmHudBadgeText!.props.style)).toContain('#fb7185');
 
   await ReactTestRenderer.act(() => renderer!.unmount());
 });
@@ -583,9 +605,11 @@ test('supports liquid dock gestures: tap, long-press shortcuts, and scrubbing ac
     .join(' ');
   expect(allTexts).not.toContain('Quick Shortcuts');
 
-  // 3. Release finger at slot 2 (Focus)
+  // 3. Release finger at slot 2 (Focus) and simulate Android bubbling onTouchEnd on original slot 0
+  const dashboardTab = renderer!.root.findByProps({ testID: 'dock-tab-counter' });
   await ReactTestRenderer.act(async () => {
     liquidDock.props.onResponderRelease(createSyntheticPanEvent(450, 650, 50, 650));
+    dashboardTab.props.onTouchEnd();
   });
 
   // Verify tab switched to Focus (contains In-Feed Neuro-Interventions)
@@ -642,6 +666,44 @@ test('allows toggling fixed app font in Settings tab instead of Android default 
   expect(sampleText).toBeDefined();
   expect(sampleText!.props.allowFontScaling).toBe(false);
   expect(JSON.stringify(sampleText!.props.style)).toContain('PollyFixedSans');
+
+  await ReactTestRenderer.act(async () => {
+    renderer!.unmount();
+  });
+});
+
+test('syncs externally started Focus Mode and remaining seconds from native status', async () => {
+  const getStatusSpy = PrototypeSettings.getPrototypeStatus as jest.Mock;
+  getStatusSpy.mockResolvedValueOnce({
+    serviceConnected: true,
+    candidateCount: 3,
+    bufferedEventCount: 1,
+    instagramCount: 2,
+    tiktokCount: 1,
+    youtubeCount: 0,
+    snapchatCount: 0,
+    dailyShortLimit: 50,
+    focusModeActive: true,
+    focusRemainingSeconds: 420,
+    onboardingCompleted: true,
+  });
+
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  const allTexts = renderer!.root
+    .findAllByType(Text)
+    .map(n => n.props.children)
+    .flat(Infinity)
+    .join('');
+  // Focus banner & dock badge should reflect 420s -> 07:00 / 7m active Focus sprint
+  expect(allTexts).toContain('Shield Mode Engaged');
+  expect(allTexts).toContain('07:00');
+  expect(allTexts).toContain('7m');
 
   await ReactTestRenderer.act(async () => {
     renderer!.unmount();

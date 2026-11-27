@@ -8,6 +8,8 @@ import {
   Image,
   Modal,
   PanResponder,
+  PermissionsAndroid,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -361,21 +363,26 @@ const getZenLevel = (xp: number): { level: number; title: string; iconName: Icon
 };
 
 const formatTimer = (sec: number) => {
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
+  const safeSec = Math.max(0, Math.floor(sec));
+  if (safeSec >= 3600) {
+    const h = Math.floor(safeSec / 3600);
+    const m = Math.floor((safeSec % 3600) / 60);
+    const s = safeSec % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  const m = Math.floor(safeSec / 60);
+  const s = safeSec % 60;
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const getGreeting = () => {
-  const hour = new Date().getHours();
+const getGreeting = (hour: number = new Date().getHours()) => {
   if (hour < 12) return { text: 'Good morning', iconName: 'sun' as IconName, tip: 'Fresh start — keep your morning scroll-free.' };
   if (hour < 17) return { text: 'Good afternoon', iconName: 'bolt' as IconName, tip: 'Notice if boredom triggers unconscious swipes.' };
   if (hour < 22) return { text: 'Good evening', iconName: 'moon' as IconName, tip: 'Wind down your dopamine levels for sound sleep.' };
   return { text: 'Late night hours', iconName: 'moon' as IconName, tip: 'Protect your melatonin and deep recovery rest.' };
 };
 
-const getChronoAnalysis = (): { level: string; badgeColor: string; iconName: IconName; title: string; advice: string } => {
-  const hour = new Date().getHours();
+const getChronoAnalysis = (hour: number = new Date().getHours()): { level: string; badgeColor: string; iconName: IconName; title: string; advice: string } => {
   if (hour >= 22 || hour < 5) {
     return {
       level: 'Critical Vulnerability',
@@ -460,6 +467,7 @@ function App() {
   );
   const [todayMood, setTodayMood] = useState<UserMood | null>(null);
   const [dopamineFastActive, setDopamineFastActive] = useState<boolean>(false);
+  const [currentHour, setCurrentHour] = useState<number>(() => new Date().getHours());
   const [soundscape, setSoundscape] = useState<FocusSoundscape>('rain');
   const [soundscapePlaying, setSoundscapePlaying] = useState<boolean>(false);
 
@@ -533,8 +541,18 @@ function App() {
     }
   }, [introSoundscapeActive]);
 
+  useEffect(() => {
+    return () => {
+      if (introSoundscapeTimerRef.current) {
+        clearTimeout(introSoundscapeTimerRef.current);
+        introSoundscapeTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Block & Focus state
   const [focusModeActive, setFocusModeActive] = useState(false);
+  const lastNativeFocusActiveRef = useRef<boolean | null>(null);
   const [blockInstagram, setBlockInstagram] = useState(true);
   const [blockTikTok, setBlockTikTok] = useState(true);
   const [blockYouTube, setBlockYouTube] = useState(false);
@@ -613,59 +631,53 @@ function App() {
 
   // Polly's Morning Alignment State
   const [showMorningAlignment, setShowMorningAlignment] = useState(false);
-  const [morningReclaimedMins, _setMorningReclaimedMins] = useState(45);
   const [morningCountdown, setMorningCountdown] = useState(5);
   const hasTriggeredMorningCheck = useRef(false);
 
-  // Polly's Morning Alignment Card - Auto-trigger on morning hours
+  // Polly's Morning Alignment Card - Auto-trigger on morning hours only after onboarding intro closes
   useEffect(() => {
     if ((globalThis as any).process?.env?.NODE_ENV === 'test') return;
+    if (showIntro) return;
     if (hasTriggeredMorningCheck.current) return;
     hasTriggeredMorningCheck.current = true;
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 14) {
       setShowMorningAlignment(true);
     }
-  }, []);
+  }, [showIntro]);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    if (showMorningAlignment) {
-      setMorningCountdown(5);
-      timer = setInterval(() => {
-        setMorningCountdown(prev => {
-          if (prev <= 1) {
-            setShowMorningAlignment(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+    if (!showMorningAlignment) return;
+    setMorningCountdown(5);
+    const timer = setInterval(() => {
+      setMorningCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [showMorningAlignment]);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    if (showConsciousExitModal) {
-      setConsciousExitCountdown(60);
-      timer = setInterval(() => {
-        setConsciousExitCountdown(prev => {
-          if (prev <= 1) {
-            setShowConsciousExitModal(false);
-            Alert.alert('Mindful Session Complete', 'Phone rested face down.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (showMorningAlignment && morningCountdown <= 0) {
+      setShowMorningAlignment(false);
+      setMorningCountdown(5);
     }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+  }, [showMorningAlignment, morningCountdown]);
+
+  useEffect(() => {
+    if (!showConsciousExitModal) return;
+    setConsciousExitCountdown(60);
+    const timer = setInterval(() => {
+      setConsciousExitCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [showConsciousExitModal]);
+
+  useEffect(() => {
+    if (showConsciousExitModal && consciousExitCountdown <= 0) {
+      setShowConsciousExitModal(false);
+      setConsciousExitCountdown(60);
+      Alert.alert('Mindful Session Complete', 'Phone rested face down.');
+    }
+  }, [showConsciousExitModal, consciousExitCountdown]);
 
   // Ambient Mindful Hero Ring Breathing Animation
   const ringBreathAnim = useRef(new Animated.Value(0)).current;
@@ -906,8 +918,7 @@ function App() {
             label: '25m Focus Sprint',
             icon: 'timer',
             action: () => {
-              handleSelectFocusPreset(25);
-              handleToggleFocusSession();
+              handleStartFocusDuration(25);
             },
           },
           { label: '90s Wave Surfer', icon: 'wave', action: () => openCravingModal('delay') },
@@ -1068,6 +1079,18 @@ function App() {
   const lastAnimatedTabIdxRef = useRef<number | null>(null);
   const lastAnimateTimestampRef = useRef<number>(0);
   const hasScrubbedRef = useRef(false);
+  const lastPanHandledAtRef = useRef<number>(0);
+  const activeTabRef = useRef<Tab>(activeTab);
+  activeTabRef.current = activeTab;
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const animateTabSelection = useCallback((targetIdx: number) => {
     const now = Date.now();
@@ -1076,6 +1099,10 @@ function App() {
     }
     lastAnimateTimestampRef.current = now;
     lastAnimatedTabIdxRef.current = targetIdx;
+
+    if (quickActionTabRef.current !== null) {
+      closeQuickActions(true);
+    }
 
     const chosenTab = TABS[targetIdx]?.id ?? 'counter';
 
@@ -1239,10 +1266,17 @@ function App() {
         Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (evt, gesture) => {
+        lastPanHandledAtRef.current = Date.now();
         isDragActiveRef.current = true;
         hasScrubbedRef.current = false;
         didLongPressRef.current = false;
         setIsDraggingDock(true);
+
+        dockWrapRef.current?.measureInWindow?.((x: number) => {
+          if (x !== undefined && !isNaN(x)) {
+            dockLeftRef.current = x;
+          }
+        });
 
         const screenX = gesture?.x0 ?? evt?.nativeEvent?.pageX;
         const screenY = gesture?.y0 ?? evt?.nativeEvent?.pageY;
@@ -1367,6 +1401,7 @@ function App() {
         }
       },
       onPanResponderRelease: (evt, gesture) => {
+        lastPanHandledAtRef.current = Date.now();
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
@@ -1430,6 +1465,7 @@ function App() {
         }
       },
       onPanResponderTerminate: () => {
+        lastPanHandledAtRef.current = Date.now();
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
@@ -1440,7 +1476,7 @@ function App() {
         setIsDraggingDock(false);
         tooltipVisibleRef.current = false;
         setHoveredTabIndex(null);
-        const activeIdx = TAB_INDEX_MAP[activeTab];
+        const activeIdx = TAB_INDEX_MAP[activeTabRef.current];
 
         Animated.spring(dockScale, {
           toValue: 1.0,
@@ -1668,6 +1704,30 @@ function App() {
             );
           }
 
+          // Sync Focus Mode state started externally (Widget, Quick Settings, Notification) or after backgrounding
+          if (status.focusModeActive !== undefined) {
+            const prevNativeFocus = lastNativeFocusActiveRef.current;
+            lastNativeFocusActiveRef.current = status.focusModeActive;
+            if (status.focusModeActive) {
+              setFocusModeActive(prev => (prev ? prev : true));
+              setFocusTimerRunning(prev => (prev ? prev : true));
+              const remaining = status.focusRemainingSeconds ?? 0;
+              if (remaining > 0) {
+                setFocusTimerSeconds(prev => (Math.abs(prev - remaining) >= 2 ? remaining : prev));
+              }
+              if (remaining > 120 * 60) {
+                setDopamineFastActive(prev => (prev ? prev : true));
+              }
+            } else if (prevNativeFocus === true) {
+              setFocusModeActive(false);
+              setFocusTimerRunning(false);
+              setDopamineFastActive(false);
+              setFocusTimerSeconds(15 * 60);
+            }
+          }
+          const latestHour = new Date().getHours();
+          setCurrentHour(prev => (prev !== latestHour ? latestHour : prev));
+
           // Smart History Fetch: Only fetch history if candidateCount changed or on initial load
           if (lastHistoryCandidateCountRef.current !== status.candidateCount || dayHistoryRef.current.length === 0) {
             lastHistoryCandidateCountRef.current = status.candidateCount;
@@ -1728,86 +1788,100 @@ function App() {
 
   // Sync Focus Mode timer and native service
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    if (focusTimerRunning) {
-      timer = setInterval(() => {
-        setFocusTimerSeconds(prev => {
-          if (prev <= 1) {
-            setFocusTimerRunning(false);
-            setFocusModeActive(false);
-            PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
-            Alert.alert('Focus Session Complete!', 'Great job avoiding distraction and staying on track.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
+    if (!focusTimerRunning) return;
+    const timer = setInterval(() => {
+      setFocusTimerSeconds(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [focusTimerRunning]);
+
+  useEffect(() => {
+    if (focusTimerRunning && focusTimerSeconds <= 0) {
+      setFocusTimerRunning(false);
+      setFocusModeActive(false);
+      setDopamineFastActive(false);
+      setFocusTimerSeconds(15 * 60);
+      PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
+      if (!dailyQuestsClaimed.shield) {
+        setDailyQuestsClaimed(q => ({ ...q, shield: true }));
+        PrototypeSettings.addZenXp(50).then(setZenXp).catch(() => {});
+      }
+      Alert.alert('Focus Session Complete!', 'Great job avoiding distraction and staying on track.');
+    }
+  }, [focusTimerRunning, focusTimerSeconds, dailyQuestsClaimed.shield]);
 
   // Mindful Breath Guide Engine (4-4-4 Box Breathing)
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (showCravingModal && cravingTab === 'breathing') {
-      interval = setInterval(() => {
-        setBreatheSecondsRemaining(prev => {
-          if (prev <= 1) {
-            setShowCravingModal(false);
-            Alert.alert('Mindful Reset Complete', 'Take this calm awareness with you into your day.');
-            return 60;
-          }
-          return prev - 1;
-        });
-
-        setBreatheCycleSec(prev => {
-          if (prev <= 1) {
-            // Transition phase
-            setBreathePhase(current => {
-              if (current === 'Inhale') return 'Hold';
-              if (current === 'Hold') return 'Exhale';
-              return 'Inhale';
-            });
-            return 4; // 4-second cycles
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    if (!showCravingModal || cravingTab !== 'breathing') return;
+    setBreatheSecondsRemaining(60);
+    setBreatheCycleSec(4);
+    setBreathePhase('Inhale');
+    const interval = setInterval(() => {
+      setBreatheSecondsRemaining(prev => Math.max(0, prev - 1));
+      setBreatheCycleSec(prev => (prev <= 1 ? 4 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
   }, [showCravingModal, cravingTab]);
+
+  useEffect(() => {
+    if (!showCravingModal || cravingTab !== 'breathing') return;
+    if (breatheSecondsRemaining <= 0) {
+      setShowCravingModal(false);
+      setBreatheSecondsRemaining(60);
+      setBreatheCycleSec(4);
+      setBreathePhase('Inhale');
+      Alert.alert('Mindful Reset Complete', 'Take this calm awareness with you into your day.');
+      return;
+    }
+    if (breatheSecondsRemaining < 60 && breatheSecondsRemaining % 4 === 0) {
+      setBreathePhase(current =>
+        current === 'Inhale' ? 'Hold' : current === 'Hold' ? 'Exhale' : 'Inhale',
+      );
+    }
+  }, [showCravingModal, cravingTab, breatheSecondsRemaining]);
 
   // 90-Second Craving Surge Delay Engine
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (delayRunning) {
-      interval = setInterval(() => {
-        setDelaySeconds(prev => {
-          if (prev <= 1) {
-            setDelayRunning(false);
-            Alert.alert(
-              'Craving Wave Surfed!',
-              'Awesome impulse victory! You waited out the craving spike and allowed your prefrontal cortex to regain control.',
-            );
-            return 90;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    if (!delayRunning) return;
+    const interval = setInterval(() => {
+      setDelaySeconds(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
   }, [delayRunning]);
 
-  const openCravingModal = (tab: CravingTab = 'breathing') => {
+  useEffect(() => {
+    if (delayRunning && delaySeconds <= 0) {
+      setDelayRunning(false);
+      setDelaySeconds(90);
+      Alert.alert(
+        'Craving Wave Surfed!',
+        'Awesome impulse victory! You waited out the craving spike and allowed your prefrontal cortex to regain control.',
+      );
+    }
+  }, [delayRunning, delaySeconds]);
+
+  const resetStroop = useCallback(() => {
+    setStroopRound(0);
+    setStroopFeedback(null);
+    setStroopFinished(false);
+  }, []);
+
+  const openCravingModal = useCallback((tab: CravingTab = 'breathing') => {
+    if (tab === 'stroop') {
+      resetStroop();
+    }
     setCravingTab(tab);
     setShowCravingModal(true);
-  };
+  }, [resetStroop]);
+
+  const requestPostNotificationsIfNeeded = useCallback(async () => {
+    try {
+      if (Platform.OS === 'android' && Number(Platform.Version) >= 33 && typeof PermissionsAndroid?.request === 'function') {
+        const perm = PermissionsAndroid.PERMISSIONS?.POST_NOTIFICATIONS || 'android.permission.POST_NOTIFICATIONS';
+        await PermissionsAndroid.request(perm as any);
+      }
+    } catch {}
+  }, []);
 
   const toggleSoundscapeAudio = useCallback((targetPlaying?: boolean, soundscapeType: FocusSoundscape = soundscape) => {
     const nextPlaying = targetPlaying !== undefined ? targetPlaying : !soundscapePlaying;
@@ -1825,21 +1899,23 @@ function App() {
     }
 
     setSettingsError(false);
+    await requestPostNotificationsIfNeeded();
     try {
       await PrototypeSettings.openAccessibilitySettings();
     } catch {
       setSettingsError(true);
     }
-  }, [consentGiven]);
+  }, [consentGiven, requestPostNotificationsIfNeeded]);
 
-  const handleEnterDashboard = () => {
+  const handleEnterDashboard = useCallback(() => {
     if (introSoundscapeTimerRef.current) {
       clearTimeout(introSoundscapeTimerRef.current);
     }
     PrototypeSettings.stopSoundscape().catch(() => {});
     setShowIntro(false);
     PrototypeSettings.setOnboardingCompleted(true).catch(() => {});
-  };
+    requestPostNotificationsIfNeeded().catch(() => {});
+  }, [requestPostNotificationsIfNeeded]);
 
   const handleResetCounters = async () => {
     Alert.alert(
@@ -1932,9 +2008,10 @@ function App() {
   }, [blockInstagram, blockTikTok, blockYouTube, blockSnapchat]);
 
   const handleToggleFocusSession = useCallback(async () => {
-    if (focusTimerRunning) {
+    if (focusTimerRunning || focusModeActive) {
       setFocusTimerRunning(false);
       setFocusModeActive(false);
+      setDopamineFastActive(false);
       await PrototypeSettings.setFocusMode(false, 0, []);
     } else {
       const blocked = getBlockedPackagesList();
@@ -1943,16 +2020,22 @@ function App() {
       setFocusModeActive(true);
       setFocusTimerRunning(true);
     }
-  }, [focusTimerRunning, getBlockedPackagesList, focusTimerSeconds]);
+  }, [focusTimerRunning, focusModeActive, getBlockedPackagesList, focusTimerSeconds]);
 
-  const handleQuickFocus15m = useCallback(async () => {
-    setFocusTimerSeconds(15 * 60);
+  const handleStartFocusDuration = useCallback(async (mins: number) => {
+    setFocusTimerSeconds(mins * 60);
+    setDopamineFastActive(false);
     const blocked = getBlockedPackagesList();
-    await PrototypeSettings.setFocusMode(true, 15, blocked);
+    await PrototypeSettings.setFocusMode(true, mins, blocked);
     setFocusModeActive(true);
     setFocusTimerRunning(true);
     setActiveTab('block');
   }, [getBlockedPackagesList]);
+
+  const handleQuickFocus15m = useCallback(
+    () => handleStartFocusDuration(15),
+    [handleStartFocusDuration],
+  );
 
   const handleAdjustLimit = useCallback((delta: number) => {
     const next = Math.max(10, Math.min(300, dailyLimit + delta));
@@ -2013,7 +2096,7 @@ function App() {
     return Math.round(total / dayHistory.length);
   }, [dayHistory, totalShorts]);
 
-  const greeting = useMemo(() => getGreeting(), []);
+  const greeting = useMemo(() => getGreeting(currentHour), [currentHour]);
 
   // Dynamic Mindful Streak (memoized)
   const mindfulStreak = useMemo(() => {
@@ -2034,6 +2117,14 @@ function App() {
 
   // Life Reclaimed Beyond Screen
   const typicalDailyDoomscrollMins = 90;
+  const morningReclaimedMins = useMemo(() => {
+    if (dayHistory.length >= 2) {
+      const yesterday = dayHistory[dayHistory.length - 2];
+      const yesterdayMins = Math.round((yesterday?.count || 0) * 0.5);
+      return Math.max(0, typicalDailyDoomscrollMins - yesterdayMins);
+    }
+    return 45;
+  }, [dayHistory]);
   const timeSavedMins = useMemo(() => Math.max(0, typicalDailyDoomscrollMins - estMinutes), [estMinutes]);
   const bookPagesEquivalent = useMemo(() => Math.max(1, Math.round(estMinutes * 0.75)), [estMinutes]);
   const walkingStepsEquivalent = useMemo(() => Math.max(50, Math.round(estMinutes * 95)), [estMinutes]);
@@ -2050,7 +2141,7 @@ function App() {
     } catch {}
   }, [mindfulStreak, estMinutes, timeSavedMins, zenXp]);
 
-  const chronoShield = useMemo(() => getChronoAnalysis(), []);
+  const chronoShield = useMemo(() => getChronoAnalysis(currentHour), [currentHour]);
 
   const milestones: { id: string; iconName: IconName; name: string; desc: string; unlocked: boolean }[] = useMemo(
     () => [
@@ -2113,8 +2204,11 @@ function App() {
     if (chosenColorName === currentTrial.colorName) {
       if (stroopRound >= 2) {
         setStroopFinished(true);
-        setZenXp(prev => prev + 40);
-        setDailyQuestsClaimed(prev => ({ ...prev, reset: true }));
+        if (!dailyQuestsClaimed.reset) {
+          setZenXp(prev => prev + 40);
+          setDailyQuestsClaimed(prev => ({ ...prev, reset: true }));
+          PrototypeSettings.addZenXp(40).then(setZenXp).catch(() => {});
+        }
       } else {
         setStroopRound(prev => prev + 1);
         setStroopFeedback('Correct! Prefrontal cortex taking over.');
@@ -2123,14 +2217,6 @@ function App() {
       setStroopFeedback('Autopilot reflex detected! Focus on the INK COLOR.');
     }
   };
-
-  const resetStroop = () => {
-    setStroopRound(0);
-    setStroopFeedback(null);
-    setStroopFinished(false);
-  };
-
-
 
   const selectedHourProfile = useMemo(
     () => getHourDopamineProfile(selectedDopamineHour),
@@ -2456,8 +2542,8 @@ function App() {
                         {`${introDemoHudCount} swipes`}
                       </Text>
                     </View>
-                    <View style={[styles.introHudExpressionPill, { backgroundColor: introDemoHudCount < 4 ? 'rgba(56, 211, 159, 0.2)' : introDemoHudCount < 8 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 113, 133, 0.2)' }]}>
-                      <Text style={[styles.introHudExpressionText, { color: introDemoHudCount < 4 ? '#6EE3AD' : introDemoHudCount < 8 ? '#FBBF24' : '#FB7185' }]}>
+                    <View style={[styles.introHudExpressionPill, { backgroundColor: introDemoHudCount < 4 ? currentTheme.glow : introDemoHudCount < 8 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 113, 133, 0.2)' }]}>
+                      <Text style={[styles.introHudExpressionText, { color: introDemoHudCount < 4 ? currentTheme.primary : introDemoHudCount < 8 ? '#FBBF24' : '#FB7185' }]}>
                         {introDemoHudCount < 4 ? 'CALM' : introDemoHudCount < 8 ? 'ATTENTIVE' : 'REST'}
                       </Text>
                     </View>
@@ -2775,7 +2861,7 @@ function App() {
                   styles.introMascotCardCompact,
                   {
                     backgroundColor: currentTheme.surfaceRaised,
-                    borderColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.border,
+                    borderColor: prototypeStatus.serviceConnected ? currentTheme.primary : currentTheme.border,
                   },
                 ]}
               >
@@ -2784,7 +2870,7 @@ function App() {
                     style={[
                       styles.introMascotAvatarInteractiveWrap,
                       {
-                        borderColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary,
+                        borderColor: currentTheme.primary,
                         backgroundColor: currentTheme.glow,
                         transform: [
                           { scale: pollyScaleAnim },
@@ -2803,16 +2889,16 @@ function App() {
                       style={styles.introMascotAvatarInteractive}
                       resizeMode="cover"
                     />
-                    <View style={[styles.introMascotStatusDot, { backgroundColor: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]} />
+                    <View style={[styles.introMascotStatusDot, { backgroundColor: currentTheme.primary }]} />
                   </Animated.View>
                   <View style={styles.introMascotSpeechWrap}>
                     <View style={styles.introMascotHeaderRow}>
-                      <Text style={[styles.introMascotName, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
+                      <Text style={[styles.introMascotName, { color: currentTheme.primary }]}>
                         {prototypeStatus.serviceConnected ? 'Polly · Ready & Calibrated!' : "Polly's Setup Checklist"}
                       </Text>
-                      <View style={[styles.introMascotPill, { backgroundColor: prototypeStatus.serviceConnected ? 'rgba(56, 211, 159, 0.15)' : currentTheme.glow, borderColor: currentTheme.hairline }]}>
-                        <Text style={[styles.introMascotPillText, { color: prototypeStatus.serviceConnected ? '#38d39f' : currentTheme.primary }]}>
-                          {prototypeStatus.serviceConnected ? 'ALL CHECKS GREEN' : '100% PRIVATE'}
+                      <View style={[styles.introMascotPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.hairline }]}>
+                        <Text style={[styles.introMascotPillText, { color: currentTheme.primary }]}>
+                          {prototypeStatus.serviceConnected ? 'ALL CHECKS PASS' : '100% PRIVATE'}
                         </Text>
                       </View>
                     </View>
@@ -3022,6 +3108,7 @@ function App() {
     currentTheme,
     windowWidth,
     continueToSettings,
+    handleEnterDashboard,
     dailyLimit,
     dailyTimeLimitMin,
     goToIntroSlide,
@@ -3220,7 +3307,7 @@ function App() {
               <Text style={[styles.heroCount, isOverLimit ? styles.heroCountOverLimit : { color: currentTheme.primary }]}>
                 {totalShorts}
               </Text>
-              <Text style={styles.heroUnitLabel}>videos today</Text>
+              <Text style={[styles.heroUnitLabel, { color: currentTheme.primary }]}>videos today</Text>
               <Text style={styles.heroGoalSubtext}>of {dailyLimit} target</Text>
             </View>
           </Animated.View>
@@ -3240,7 +3327,7 @@ function App() {
             <Text style={[styles.heroStepperBtnText, { color: currentTheme.primary }]}>- 5</Text>
           </Pressable>
 
-          <View style={[styles.heroTargetPill, { borderColor: currentTheme.hairline }]}>
+          <View style={[styles.heroTargetPill, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
             <Text style={styles.heroTargetPillLabel}>
               Boundary: <Text style={[styles.heroTargetPillVal, { color: currentTheme.primary }]}>{dailyLimit} reels</Text>
             </Text>
@@ -3280,7 +3367,7 @@ function App() {
                 : 'Balanced & Mindful'}
             </Text>
           </View>
-          <View style={styles.riskTrack}>
+          <View style={[styles.riskTrack, { backgroundColor: currentTheme.hairline }]}>
             <View
               style={[
                 styles.riskFill,
@@ -3408,11 +3495,11 @@ function App() {
             <Text style={styles.cardSectionTitle}>Polly on the Floating HUD</Text>
           </View>
           <View style={[styles.mascotExpressionBadge, {
-            backgroundColor: simulatedHudSwipes < 25 ? 'rgba(110, 227, 173, 0.15)' : simulatedHudSwipes < 50 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 113, 133, 0.15)',
-            borderColor: simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
+            backgroundColor: simulatedHudSwipes < 25 ? currentTheme.glow : simulatedHudSwipes < 50 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(251, 113, 133, 0.15)',
+            borderColor: simulatedHudSwipes < 25 ? currentTheme.primary : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
           }]}>
             <Text style={[styles.mascotExpressionBadgeText, {
-              color: simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
+              color: simulatedHudSwipes < 25 ? currentTheme.primary : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185',
             }]}>
               {simulatedHudSwipes < 25 ? 'CALM (0-25)' : simulatedHudSwipes < 50 ? 'ATTENTIVE (25-50)' : 'REST NEEDED (50+)'}
             </Text>
@@ -3423,12 +3510,12 @@ function App() {
         </Text>
 
         {/* Live Adaptive HUD Stage */}
-        <View style={styles.mascotHudStage}>
+        <View style={[styles.mascotHudStage, { backgroundColor: currentTheme.background, borderColor: currentTheme.hairline }]}>
           {(() => {
-            const moodColor = simulatedHudSwipes < 25 ? '#6EE3AD' : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185';
+            const moodColor = simulatedHudSwipes < 25 ? currentTheme.primary : simulatedHudSwipes < 50 ? '#FBBF24' : '#FB7185';
             const moodLabel = simulatedHudSwipes < 25 ? 'Zen Guide' : simulatedHudSwipes < 50 ? 'Focus Mode' : 'Rest Alert';
             return (
-              <View style={[styles.mascotHudPreviewPill, { borderColor: moodColor }]}>
+              <View style={[styles.mascotHudPreviewPill, { borderColor: moodColor, backgroundColor: currentTheme.surfaceRaised }]}>
                 {/* Circular Mascot Avatar with Mood Ring */}
                 <View style={[styles.mascotHudAvatarRing, { borderColor: moodColor }]}>
                   <Image
@@ -3543,7 +3630,11 @@ function App() {
           <Pressable
             onPress={() => {
               triggerDockHaptic();
-              handleQuickFocus15m();
+              if (focusModeActive) {
+                handleToggleFocusSession();
+              } else {
+                handleQuickFocus15m();
+              }
             }}
             style={[styles.widgetSprintBtn, { backgroundColor: currentTheme.actionFill, borderColor: currentTheme.border }]}
           >
@@ -3660,6 +3751,10 @@ function App() {
                     <Pressable
                       onPress={() => {
                         triggerDockHaptic();
+                        if (platform.id === 'instagram') setBlockInstagram(true);
+                        if (platform.id === 'tiktok') setBlockTikTok(true);
+                        if (platform.id === 'youtube') setBlockYouTube(true);
+                        if (platform.id === 'snapchat') setBlockSnapchat(true);
                         setActiveTab('block');
                       }}
                       style={[styles.platformMicroActionBtn, { borderColor: currentTheme.border, backgroundColor: currentTheme.glow }]}
@@ -3778,8 +3873,10 @@ function App() {
             </View>
             <Text style={styles.dayInsightBody}>
               Scrolled <Text style={[styles.highlightText, { color: currentTheme.primary }]}>{dayHistory[selectedHistoryIndex].count} shorts</Text> (≈ {Math.round(dayHistory[selectedHistoryIndex].count * 0.5)} mins).{' '}
-              {dayHistory[selectedHistoryIndex].count <= dailyLimit
+              {dayHistory[selectedHistoryIndex].count < dailyLimit
                 ? 'Kept inside your healthy target!'
+                : dayHistory[selectedHistoryIndex].count === dailyLimit
+                ? 'Hit your daily target boundary.'
                 : `Exceeded target by ${dayHistory[selectedHistoryIndex].count - dailyLimit} videos.`}
             </Text>
           </View>
@@ -3803,11 +3900,11 @@ function App() {
 
       {/* Dock Quick Shortcuts Row */}
       <View style={styles.dashboardShortcutsRow}>
-        <Pressable onPress={() => setActiveTab('block')} style={[styles.dashboardShortcutCard, { borderColor: currentTheme.hairline }]}>
+        <Pressable onPress={() => setActiveTab('block')} style={[styles.dashboardShortcutCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
           <AppIcon name="shield" size={16} color={currentTheme.primary} />
           <Text style={styles.dashboardShortcutTitle}>Focus & Craving SOS →</Text>
         </Pressable>
-        <Pressable onPress={() => setActiveTab('timers')} style={[styles.dashboardShortcutCard, { borderColor: currentTheme.hairline }]}>
+        <Pressable onPress={() => setActiveTab('timers')} style={[styles.dashboardShortcutCard, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
           <AppIcon name="timer" size={16} color={currentTheme.primary} />
           <Text style={styles.dashboardShortcutTitle}>Limits & Insights →</Text>
         </Pressable>
@@ -3822,6 +3919,8 @@ function App() {
     greeting.text,
     greeting.tip,
     handleQuickFocus15m,
+    handleToggleFocusSession,
+    openCravingModal,
     hudStyle,
     focusTimerRunning,
     focusTimerSeconds,
@@ -3889,6 +3988,7 @@ function App() {
               }}
               style={[
                 styles.pillButton,
+                { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
                 dailyLimit === limit && [
                   styles.pillButtonSelected,
                   { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
@@ -3898,6 +3998,7 @@ function App() {
               <Text
                 style={[
                   styles.pillButtonText,
+                  { color: currentTheme.subtext },
                   dailyLimit === limit && [
                     styles.pillButtonTextSelected,
                     { color: currentTheme.primary },
@@ -3911,7 +4012,7 @@ function App() {
         </View>
 
         {/* Stepper for custom values */}
-        <View style={styles.stepperRow}>
+        <View style={[styles.stepperRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
           <Pressable
             onPress={() => {
               triggerDockHaptic();
@@ -3954,6 +4055,7 @@ function App() {
               }}
               style={[
                 styles.pillButton,
+                { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
                 dailyTimeLimitMin === mins && [
                   styles.pillButtonSelected,
                   { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
@@ -3963,6 +4065,7 @@ function App() {
               <Text
                 style={[
                   styles.pillButtonText,
+                  { color: currentTheme.subtext },
                   dailyTimeLimitMin === mins && [
                     styles.pillButtonTextSelected,
                     { color: currentTheme.primary },
@@ -3976,7 +4079,7 @@ function App() {
         </View>
 
         {/* Stepper for custom minutes */}
-        <View style={styles.stepperRow}>
+        <View style={[styles.stepperRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
           <Pressable
             onPress={() => {
               triggerDockHaptic();
@@ -4006,9 +4109,9 @@ function App() {
             <Text style={[styles.cardSectionEyebrow, { color: currentTheme.primary }]}>CIRCADIAN DOPAMINE MATRIX</Text>
             <Text style={styles.cardSectionTitle}>24-Hour Attention Clock</Text>
           </View>
-          <View style={styles.liveNowPill}>
+          <View style={[styles.liveNowPill, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
             <View style={[styles.liveNowDot, { backgroundColor: currentTheme.primary }]} />
-            <Text style={styles.liveNowText}>Hour {new Date().getHours()}:00</Text>
+            <Text style={[styles.liveNowText, { color: currentTheme.primary }]}>Hour {currentHour}:00</Text>
           </View>
         </View>
 
@@ -4016,7 +4119,7 @@ function App() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyBarRow} nestedScrollEnabled={true} overScrollMode="never">
           {HOURLY_DOPAMINE_PROFILES.map((prof, h) => {
             const isSelected = selectedDopamineHour === h;
-            const isCurrent = new Date().getHours() === h;
+            const isCurrent = currentHour === h;
 
             return (
               <Pressable
@@ -4160,8 +4263,15 @@ function App() {
             <AppIcon name="moon" size={18} color={currentTheme.primary} />
             <Text style={styles.cardSectionTitle}>Bedtime Sleep Shield</Text>
           </View>
-          <View style={[styles.statusBadgeSmall, bedtimeShield ? styles.badgeBlocked : styles.badgeNormal]}>
-            <Text style={[styles.statusBadgeSmallText, bedtimeShield ? styles.textBlocked : styles.textNormal]}>
+          <View
+            style={[
+              styles.statusBadgeSmall,
+              bedtimeShield
+                ? styles.badgeBlocked
+                : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+            ]}
+          >
+            <Text style={[styles.statusBadgeSmallText, bedtimeShield ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
               {bedtimeShield ? 'SCHEDULED (11 PM)' : 'OFF'}
             </Text>
           </View>
@@ -4186,8 +4296,8 @@ function App() {
               Protects nighttime rest and eliminates late-night doomscrolling before sleep.
             </Text>
           </View>
-          <View style={[styles.switchTrack, bedtimeShield && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}>
-            <View style={[styles.switchThumb, bedtimeShield && styles.switchThumbOn]} />
+          <View style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, bedtimeShield && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}>
+            <View style={[styles.switchThumb, bedtimeShield && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]} />
           </View>
         </Pressable>
       </View>
@@ -4211,12 +4321,12 @@ function App() {
             </Text>
           </View>
           <View
-            style={[styles.switchTrack, speedbumpEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, speedbumpEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
               style={[
                 styles.switchThumb,
-                speedbumpEnabled && styles.switchThumbOn,
+                speedbumpEnabled && [styles.switchThumbOn, { backgroundColor: currentTheme.background }],
               ]}
             />
           </View>
@@ -4237,10 +4347,10 @@ function App() {
             </Text>
           </View>
           <View
-            style={[styles.switchTrack, breakReminder && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, breakReminder && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
-              style={[styles.switchThumb, breakReminder && styles.switchThumbOn]}
+              style={[styles.switchThumb, breakReminder && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]}
             />
           </View>
         </Pressable>
@@ -4260,12 +4370,12 @@ function App() {
             </Text>
           </View>
           <View
-            style={[styles.switchTrack, doomscrollAlert && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, doomscrollAlert && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
               style={[
                 styles.switchThumb,
-                doomscrollAlert && styles.switchThumbOn,
+                doomscrollAlert && [styles.switchThumbOn, { backgroundColor: currentTheme.background }],
               ]}
             />
           </View>
@@ -4282,12 +4392,12 @@ function App() {
             </Text>
           </View>
           <View
-            style={[styles.switchTrack, weeklyRecapAlert && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, weeklyRecapAlert && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
               style={[
                 styles.switchThumb,
-                weeklyRecapAlert && styles.switchThumbOn,
+                weeklyRecapAlert && [styles.switchThumbOn, { backgroundColor: currentTheme.background }],
               ]}
             />
           </View>
@@ -4297,6 +4407,7 @@ function App() {
     );
   }, [
     activeTab,
+    currentHour,
     dailyLimit,
     dailyTimeLimitMin,
     selectedDopamineHour,
@@ -4345,13 +4456,28 @@ function App() {
       >
         <View style={styles.focusHeaderRow}>
           <Text style={[styles.focusHeroTitle, { color: currentTheme.primary }]}>DEEP WORK FOCUS SHIELD</Text>
-          <View style={[styles.focusLiveBadge, focusTimerRunning ? styles.focusLiveBadgeActive : styles.focusLiveBadgeIdle, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+          <View
+            style={[
+              styles.focusLiveBadge,
+              focusTimerRunning
+                ? styles.focusLiveBadgeActive
+                : [styles.focusLiveBadgeIdle, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+              { flexDirection: 'row', alignItems: 'center', gap: 4 },
+            ]}
+          >
             <AppIcon
               name={focusTimerRunning ? 'shield' : 'timer'}
               size={11}
-              color={focusTimerRunning ? '#38d39f' : currentTheme.subtext}
+              color={focusTimerRunning ? '#f87171' : currentTheme.subtext}
             />
-            <Text style={[styles.focusLiveBadgeText, focusTimerRunning ? styles.focusLiveBadgeTextActive : styles.focusLiveBadgeTextIdle]}>
+            <Text
+              style={[
+                styles.focusLiveBadgeText,
+                focusTimerRunning
+                  ? styles.focusLiveBadgeTextActive
+                  : [styles.focusLiveBadgeTextIdle, { color: currentTheme.subtext }],
+              ]}
+            >
               {focusTimerRunning ? 'SHIELD ACTIVE' : 'IDLE'}
             </Text>
           </View>
@@ -4376,6 +4502,7 @@ function App() {
                 }}
                 style={[
                   styles.presetBtn,
+                  { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
                   focusTimerSeconds === mins * 60 && [
                     styles.presetBtnActive,
                     { backgroundColor: currentTheme.primary, borderColor: currentTheme.primary },
@@ -4393,6 +4520,7 @@ function App() {
                   <Text
                     style={[
                       styles.presetBtnText,
+                      { color: currentTheme.subtext },
                       focusTimerSeconds === mins * 60 && [
                         styles.presetBtnTextActive,
                         { color: currentTheme.background },
@@ -4409,7 +4537,7 @@ function App() {
 
         {/* Stepper to customize timer while paused */}
         {!focusTimerRunning && (
-          <View style={styles.stepperRow}>
+          <View style={[styles.stepperRow, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
             <Pressable
               onPress={() => {
                 triggerDockHaptic();
@@ -4460,12 +4588,13 @@ function App() {
               triggerDockHaptic();
               setFocusTimerRunning(false);
               setFocusModeActive(false);
+              setDopamineFastActive(false);
               setFocusTimerSeconds(15 * 60);
               PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
             }}
-            style={[styles.focusResetButton, { borderColor: currentTheme.border }]}
+            style={[styles.focusResetButton, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.border }]}
           >
-            <Text style={styles.focusResetButtonText}>Reset</Text>
+            <Text style={[styles.focusResetButtonText, { color: currentTheme.subtext }]}>Reset</Text>
           </Pressable>
         </View>
       </View>
@@ -4607,9 +4736,9 @@ function App() {
                 setGrayscaleFilterEnabled(nextVal);
                 PrototypeSettings.setGrayscaleFilter(nextVal, grayscaleTriggerMode).catch(() => {});
               }}
-              style={[styles.switchTrack, grayscaleFilterEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+              style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, grayscaleFilterEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
             >
-              <View style={[styles.switchThumb, grayscaleFilterEnabled && styles.switchThumbOn]} />
+              <View style={[styles.switchThumb, grayscaleFilterEnabled && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]} />
             </Pressable>
           </View>
           <Text style={styles.neuroItemDesc}>
@@ -4678,9 +4807,9 @@ function App() {
                 setFidgetSwipeEnabled(nextVal);
                 PrototypeSettings.setFidgetSwipeDetector(nextVal).catch(() => {});
               }}
-              style={[styles.switchTrack, fidgetSwipeEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+              style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, fidgetSwipeEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
             >
-              <View style={[styles.switchThumb, fidgetSwipeEnabled && styles.switchThumbOn]} />
+              <View style={[styles.switchThumb, fidgetSwipeEnabled && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]} />
             </Pressable>
           </View>
           <Text style={styles.neuroItemDesc}>
@@ -4724,9 +4853,9 @@ function App() {
                 setConsciousExitEnabled(nextVal);
                 PrototypeSettings.setConsciousExitEnabled(nextVal).catch(() => {});
               }}
-              style={[styles.switchTrack, consciousExitEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+              style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, consciousExitEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
             >
-              <View style={[styles.switchThumb, consciousExitEnabled && styles.switchThumbOn]} />
+              <View style={[styles.switchThumb, consciousExitEnabled && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]} />
             </Pressable>
           </View>
           <Text style={styles.neuroItemDesc}>
@@ -4759,9 +4888,9 @@ function App() {
                 setRealityCheckEnabled(nextVal);
                 PrototypeSettings.setRealityCheckEnabled(nextVal).catch(() => {});
               }}
-              style={[styles.switchTrack, realityCheckEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+              style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, realityCheckEnabled && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
             >
-              <View style={[styles.switchThumb, realityCheckEnabled && styles.switchThumbOn]} />
+              <View style={[styles.switchThumb, realityCheckEnabled && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]} />
             </Pressable>
           </View>
           <Text style={styles.neuroItemDesc}>
@@ -4837,11 +4966,17 @@ function App() {
         <View style={styles.cardHeaderWithAction}>
           <Text style={styles.cardSectionTitle}>Distraction Blocking Rules</Text>
           <View style={styles.quickSelectRow}>
-            <Pressable onPress={() => handleToggleAllApps(true)} style={styles.quickSelectBtn}>
-              <Text style={styles.quickSelectBtnText}>Lock All</Text>
+            <Pressable
+              onPress={() => handleToggleAllApps(true)}
+              style={[styles.quickSelectBtn, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}
+            >
+              <Text style={[styles.quickSelectBtnText, { color: currentTheme.primary }]}>Lock All</Text>
             </Pressable>
-            <Pressable onPress={() => handleToggleAllApps(false)} style={styles.quickSelectBtn}>
-              <Text style={styles.quickSelectBtnText}>Unlock</Text>
+            <Pressable
+              onPress={() => handleToggleAllApps(false)}
+              style={[styles.quickSelectBtn, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}
+            >
+              <Text style={[styles.quickSelectBtnText, { color: currentTheme.primary }]}>Unlock</Text>
             </Pressable>
           </View>
         </View>
@@ -4861,10 +4996,17 @@ function App() {
               setFocusTimerRunning(true);
             } else {
               setFocusTimerRunning(false);
+              setDopamineFastActive(false);
               PrototypeSettings.setFocusMode(false, 0, []).catch(() => {});
             }
           }}
-          style={styles.masterToggleRow}
+          style={[
+            styles.masterToggleRow,
+            {
+              backgroundColor: focusModeActive ? currentTheme.glow : currentTheme.surfaceRaised,
+              borderColor: focusModeActive ? currentTheme.border : currentTheme.hairline,
+            },
+          ]}
         >
           <View style={styles.toggleInfo}>
             <View style={styles.masterTitleRow}>
@@ -4878,12 +5020,12 @@ function App() {
             </Text>
           </View>
           <View
-            style={[styles.switchTrack, focusModeActive && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, focusModeActive && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
               style={[
                 styles.switchThumb,
-                focusModeActive && styles.switchThumbOn,
+                focusModeActive && [styles.switchThumbOn, { backgroundColor: currentTheme.background }],
               ]}
             />
           </View>
@@ -4898,17 +5040,24 @@ function App() {
               <AppIcon name="camera" size={16} color={currentTheme.primary} />
               <Text style={styles.toggleTitle}>Instagram Reels</Text>
             </View>
-            <View style={[styles.statusBadgeSmall, blockInstagram && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
-              <Text style={[styles.statusBadgeSmallText, blockInstagram && focusModeActive ? styles.textBlocked : styles.textNormal]}>
+            <View
+              style={[
+                styles.statusBadgeSmall,
+                blockInstagram && focusModeActive
+                  ? styles.badgeBlocked
+                  : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+              ]}
+            >
+              <Text style={[styles.statusBadgeSmallText, blockInstagram && focusModeActive ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
                 {blockInstagram ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
               </Text>
             </View>
           </View>
           <View
-            style={[styles.switchTrack, blockInstagram && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, blockInstagram && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
-              style={[styles.switchThumb, blockInstagram && styles.switchThumbOn]}
+              style={[styles.switchThumb, blockInstagram && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]}
             />
           </View>
         </Pressable>
@@ -4922,17 +5071,24 @@ function App() {
               <AppIcon name="music" size={16} color={currentTheme.primary} />
               <Text style={styles.toggleTitle}>TikTok Feed</Text>
             </View>
-            <View style={[styles.statusBadgeSmall, blockTikTok && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
-              <Text style={[styles.statusBadgeSmallText, blockTikTok && focusModeActive ? styles.textBlocked : styles.textNormal]}>
+            <View
+              style={[
+                styles.statusBadgeSmall,
+                blockTikTok && focusModeActive
+                  ? styles.badgeBlocked
+                  : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+              ]}
+            >
+              <Text style={[styles.statusBadgeSmallText, blockTikTok && focusModeActive ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
                 {blockTikTok ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
               </Text>
             </View>
           </View>
           <View
-            style={[styles.switchTrack, blockTikTok && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, blockTikTok && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
-              style={[styles.switchThumb, blockTikTok && styles.switchThumbOn]}
+              style={[styles.switchThumb, blockTikTok && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]}
             />
           </View>
         </Pressable>
@@ -4946,17 +5102,24 @@ function App() {
               <AppIcon name="play" size={16} color={currentTheme.primary} />
               <Text style={styles.toggleTitle}>YouTube Shorts</Text>
             </View>
-            <View style={[styles.statusBadgeSmall, blockYouTube && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
-              <Text style={[styles.statusBadgeSmallText, blockYouTube && focusModeActive ? styles.textBlocked : styles.textNormal]}>
+            <View
+              style={[
+                styles.statusBadgeSmall,
+                blockYouTube && focusModeActive
+                  ? styles.badgeBlocked
+                  : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+              ]}
+            >
+              <Text style={[styles.statusBadgeSmallText, blockYouTube && focusModeActive ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
                 {blockYouTube ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
               </Text>
             </View>
           </View>
           <View
-            style={[styles.switchTrack, blockYouTube && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, blockYouTube && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
-              style={[styles.switchThumb, blockYouTube && styles.switchThumbOn]}
+              style={[styles.switchThumb, blockYouTube && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]}
             />
           </View>
         </Pressable>
@@ -4970,31 +5133,45 @@ function App() {
               <AppIcon name="ghost" size={16} color={currentTheme.primary} />
               <Text style={styles.toggleTitle}>Snapchat Spotlight</Text>
             </View>
-            <View style={[styles.statusBadgeSmall, blockSnapchat && focusModeActive ? styles.badgeBlocked : styles.badgeNormal]}>
-              <Text style={[styles.statusBadgeSmallText, blockSnapchat && focusModeActive ? styles.textBlocked : styles.textNormal]}>
+            <View
+              style={[
+                styles.statusBadgeSmall,
+                blockSnapchat && focusModeActive
+                  ? styles.badgeBlocked
+                  : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+              ]}
+            >
+              <Text style={[styles.statusBadgeSmallText, blockSnapchat && focusModeActive ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
                 {blockSnapchat ? (focusModeActive ? 'LOCKED' : 'WILL BLOCK') : 'ALLOWED'}
               </Text>
             </View>
           </View>
           <View
-            style={[styles.switchTrack, blockSnapchat && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
+            style={[styles.switchTrack, { backgroundColor: currentTheme.hairline }, blockSnapchat && [styles.switchTrackOn, { backgroundColor: currentTheme.primary }]]}
           >
             <View
-              style={[styles.switchThumb, blockSnapchat && styles.switchThumbOn]}
+              style={[styles.switchThumb, blockSnapchat && [styles.switchThumbOn, { backgroundColor: currentTheme.background }]]}
             />
           </View>
         </Pressable>
       </View>
 
       {/* 24-Hour Dopamine Sabbath */}
-      <View style={[styles.sectionCard, dopamineFastActive && styles.sabbathCardActive]}>
+      <View style={[styles.sectionCard, { backgroundColor: currentTheme.surface, borderColor: currentTheme.hairline }, dopamineFastActive && styles.sabbathCardActive]}>
         <View style={styles.cardHeaderWithAction}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <AppIcon name="zen" size={18} color={currentTheme.primary} />
             <Text style={styles.cardSectionTitle}>24-Hour Digital Sabbath</Text>
           </View>
-          <View style={[styles.statusBadgeSmall, dopamineFastActive ? styles.badgeBlocked : styles.badgeNormal]}>
-            <Text style={[styles.statusBadgeSmallText, dopamineFastActive ? styles.textBlocked : styles.textNormal]}>
+          <View
+            style={[
+              styles.statusBadgeSmall,
+              dopamineFastActive
+                ? styles.badgeBlocked
+                : [styles.badgeNormal, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }],
+            ]}
+          >
+            <Text style={[styles.statusBadgeSmallText, dopamineFastActive ? styles.textBlocked : [styles.textNormal, { color: currentTheme.subtext }]]}>
               {dopamineFastActive ? 'FAST ACTIVE' : 'READY'}
             </Text>
           </View>
@@ -5023,15 +5200,25 @@ function App() {
               Alert.alert('Digital Sabbath Ended', 'Distraction feeds have been unlocked.');
             }
           }}
-          style={[styles.sabbathBtn, dopamineFastActive && styles.sabbathBtnActive]}
+          style={[
+            styles.sabbathBtn,
+            !dopamineFastActive
+              ? { backgroundColor: currentTheme.primary, borderColor: currentTheme.primary }
+              : styles.sabbathBtnActive,
+          ]}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <AppIcon
               name={dopamineFastActive ? 'check' : 'leaf'}
               size={14}
-              color={dopamineFastActive ? currentTheme.subtext : currentTheme.background}
+              color={dopamineFastActive ? '#fee2e2' : currentTheme.background}
             />
-            <Text style={[styles.sabbathBtnText, dopamineFastActive && styles.sabbathBtnTextActive]}>
+            <Text
+              style={[
+                styles.sabbathBtnText,
+                { color: dopamineFastActive ? '#fee2e2' : currentTheme.background },
+              ]}
+            >
               {dopamineFastActive ? 'End 24-Hour Fast' : 'Begin 24-Hour Dopamine Fast'}
             </Text>
           </View>
@@ -5177,7 +5364,7 @@ function App() {
 
         {/* Soundscape Duration & Play Controls */}
         <View style={styles.soundscapeDurationRow}>
-          <Text style={styles.soundscapeDurationLabel}>Duration:</Text>
+          <Text style={[styles.soundscapeDurationLabel, { color: currentTheme.subtext }]}>Duration:</Text>
           {[15, 25, 45, 60].map(mins => (
             <Pressable
               key={mins}
@@ -5200,6 +5387,7 @@ function App() {
               <Text
                 style={[
                   styles.soundscapeDurationBtnText,
+                  { color: currentTheme.subtext },
                   soundscapeDurationMins === mins && [
                     styles.soundscapeDurationBtnTextActive,
                     { color: currentTheme.background },
@@ -5245,6 +5433,8 @@ function App() {
     soundscapeDurationMins,
     chronoShield,
     currentTheme,
+    openCravingModal,
+    resetStroop,
     dopamineFastActive,
     focusModeActive,
     getBlockedPackagesList,
@@ -5309,76 +5499,95 @@ function App() {
         </View>
 
         {/* Daily Mindful Quests */}
-        <Text style={styles.questsHeader}>DAILY MINDFUL QUESTS</Text>
+        <Text style={[styles.questsHeader, { color: currentTheme.subtext }]}>DAILY MINDFUL QUESTS</Text>
         <View style={styles.questsGrid}>
           <Pressable
             onPress={() => {
               if (!dailyQuestsClaimed.compass) {
                 setDailyQuestsClaimed(prev => ({ ...prev, compass: true }));
                 setZenXp(prev => prev + 20);
+                PrototypeSettings.addZenXp(20).then(setZenXp).catch(() => {});
                 Alert.alert('Quest Complete!', '+20 XP added for setting your daily intention compass.');
               }
             }}
-            style={[styles.questItem, dailyQuestsClaimed.compass && styles.questItemDone]}
+            style={[
+              styles.questItem,
+              { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
+              dailyQuestsClaimed.compass && [styles.questItemDone, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+            ]}
           >
             <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
               <AppIcon
                 name={dailyQuestsClaimed.compass ? 'check' : 'target'}
                 size={18}
-                color={dailyQuestsClaimed.compass ? '#38d39f' : currentTheme.primary}
+                color={currentTheme.primary}
               />
             </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Daily Compass</Text>
-              <Text style={styles.questReward}>+20 XP · Intent Set</Text>
+              <Text style={[styles.questReward, { color: currentTheme.subtext }]}>+20 XP · Intent Set</Text>
             </View>
           </Pressable>
 
           <Pressable
             onPress={() => openCravingModal('stroop')}
-            style={[styles.questItem, dailyQuestsClaimed.reset && styles.questItemDone]}
+            style={[
+              styles.questItem,
+              { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
+              dailyQuestsClaimed.reset && [styles.questItemDone, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+            ]}
           >
             <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
               <AppIcon
                 name={dailyQuestsClaimed.reset ? 'check' : 'brain'}
                 size={18}
-                color={dailyQuestsClaimed.reset ? '#38d39f' : currentTheme.primary}
+                color={currentTheme.primary}
               />
             </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Stroop Reset</Text>
-              <Text style={styles.questReward}>+40 XP · Tap to Play</Text>
+              <Text style={[styles.questReward, { color: currentTheme.subtext }]}>+40 XP · Tap to Play</Text>
             </View>
           </Pressable>
 
           <Pressable
             onPress={handleQuickFocus15m}
-            style={[styles.questItem, (focusTimerRunning || dailyQuestsClaimed.shield) && styles.questItemDone]}
+            style={[
+              styles.questItem,
+              { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
+              (focusTimerRunning || dailyQuestsClaimed.shield) && [styles.questItemDone, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+            ]}
           >
             <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
               <AppIcon
                 name={focusTimerRunning || dailyQuestsClaimed.shield ? 'check' : 'shield'}
                 size={18}
-                color={focusTimerRunning || dailyQuestsClaimed.shield ? '#38d39f' : currentTheme.primary}
+                color={currentTheme.primary}
               />
             </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Focus Shield</Text>
-              <Text style={styles.questReward}>+50 XP · 15m Sprint</Text>
+              <Text style={[styles.questReward, { color: currentTheme.subtext }]}>+50 XP · 15m Sprint</Text>
             </View>
           </Pressable>
 
-          <View style={[styles.questItem, totalShorts <= dailyLimit && styles.questItemDone]}>
+          <View
+            style={[
+              styles.questItem,
+              { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
+              totalShorts <= dailyLimit && [styles.questItemDone, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }],
+            ]}
+          >
             <View style={{ width: 24, alignItems: 'center', justifyContent: 'center' }}>
               <AppIcon
                 name={totalShorts <= dailyLimit ? 'check' : 'chart'}
                 size={18}
-                color={totalShorts <= dailyLimit ? '#38d39f' : currentTheme.primary}
+                color={currentTheme.primary}
               />
             </View>
             <View style={styles.questInfo}>
               <Text style={styles.questTitle}>Stay Under Cap</Text>
-              <Text style={styles.questReward}>+100 XP · At Midnight</Text>
+              <Text style={[styles.questReward, { color: currentTheme.subtext }]}>+100 XP · At Midnight</Text>
             </View>
           </View>
         </View>
@@ -5405,7 +5614,7 @@ function App() {
             style={[
               styles.vitalityMiniRing,
               vitalityScore >= 85
-                ? styles.vitalityRingHigh
+                ? [styles.vitalityRingHigh, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }]
                 : vitalityScore >= 65
                 ? styles.vitalityRingMed
                 : styles.vitalityRingLow,
@@ -5414,7 +5623,7 @@ function App() {
             <AppIcon
               name={vitalityScore >= 85 ? 'sparkle' : vitalityScore >= 65 ? 'leaf' : 'bolt'}
               size={22}
-              color={vitalityScore >= 85 ? '#38d39f' : vitalityScore >= 65 ? '#22d3ee' : '#fbbf24'}
+              color={vitalityScore >= 85 ? currentTheme.primary : vitalityScore >= 65 ? '#22d3ee' : '#fbbf24'}
             />
           </View>
         </View>
@@ -5489,7 +5698,8 @@ function App() {
               }}
               style={[
                 styles.moodCard,
-                todayMood === moodItem.id && styles.moodCardSelected,
+                { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
+                todayMood === moodItem.id && [styles.moodCardSelected, { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow }],
               ]}
             >
               <AppIcon
@@ -5500,7 +5710,8 @@ function App() {
               <Text
                 style={[
                   styles.moodLabel,
-                  todayMood === moodItem.id && styles.moodLabelSelected,
+                  { color: currentTheme.subtext },
+                  todayMood === moodItem.id && [styles.moodLabelSelected, { color: currentTheme.primary }],
                 ]}
               >
                 {moodItem.label}
@@ -5509,7 +5720,7 @@ function App() {
           ))}
         </View>
         {todayMood && (
-          <View style={[styles.moodTipBox, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+          <View style={[styles.moodTipBox, { backgroundColor: currentTheme.glow, borderLeftColor: currentTheme.primary, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
             <AppIcon name="info" size={14} color={currentTheme.primary} />
             <Text style={styles.moodTipText}>
               {moodsList.find(m => m.id === todayMood)?.tip}
@@ -5597,7 +5808,7 @@ function App() {
             style={[
               styles.statusBadge,
               prototypeStatus.serviceConnected
-                ? styles.statusBadgeActive
+                ? [styles.statusBadgeActive, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]
                 : styles.statusBadgeInactive,
             ]}
           >
@@ -5605,7 +5816,7 @@ function App() {
               style={[
                 styles.statusBadgeText,
                 prototypeStatus.serviceConnected
-                  ? styles.statusBadgeTextActive
+                  ? [styles.statusBadgeTextActive, { color: currentTheme.primary }]
                   : styles.statusBadgeTextInactive,
               ]}
             >
@@ -5621,7 +5832,7 @@ function App() {
               <AppIcon
                 name={prototypeStatus.serviceConnected ? 'check' : 'alert'}
                 size={18}
-                color={prototypeStatus.serviceConnected ? '#38d39f' : '#fbbf24'}
+                color={prototypeStatus.serviceConnected ? currentTheme.primary : '#fbbf24'}
               />
             </View>
             <View style={styles.healthInfo}>
@@ -5635,7 +5846,7 @@ function App() {
           </View>
           <View style={[styles.healthItem, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
             <View style={{ width: 22, alignItems: 'center', justifyContent: 'center' }}>
-              <AppIcon name="check" size={18} color="#38d39f" />
+              <AppIcon name="check" size={18} color={currentTheme.primary} />
             </View>
             <View style={styles.healthInfo}>
               <Text style={styles.healthTitle}>Floating Screen Overlay (HUD)</Text>
@@ -5644,7 +5855,7 @@ function App() {
           </View>
           <View style={[styles.healthItem, { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline }]}>
             <View style={{ width: 22, alignItems: 'center', justifyContent: 'center' }}>
-              <AppIcon name="check" size={18} color="#38d39f" />
+              <AppIcon name="check" size={18} color={currentTheme.primary} />
             </View>
             <View style={styles.healthInfo}>
               <Text style={styles.healthTitle}>Local Device Storage</Text>
@@ -5688,6 +5899,7 @@ function App() {
               }}
               style={[
                 styles.hudStyleCard,
+                { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
                 hudStyle === styleOpt.id && [
                   styles.hudStyleCardSelected,
                   { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
@@ -5700,13 +5912,14 @@ function App() {
                   size={14}
                   color={hudStyle === styleOpt.id ? currentTheme.primary : currentTheme.subtext}
                 />
-                <Text style={[styles.hudStyleIcon, hudStyle === styleOpt.id && { color: currentTheme.primary }]}>
+                <Text style={[styles.hudStyleIcon, { color: currentTheme.subtext }, hudStyle === styleOpt.id && { color: currentTheme.primary }]}>
                   {styleOpt.countLabel}
                 </Text>
               </View>
               <Text
                 style={[
                   styles.hudStyleLabel,
+                  { color: currentTheme.subtext },
                   hudStyle === styleOpt.id && [
                     styles.hudStyleLabelSelected,
                     { color: currentTheme.primary },
@@ -5865,6 +6078,7 @@ function App() {
                 }}
                 style={[
                   styles.hudStyleCard,
+                  { backgroundColor: currentTheme.surfaceRaised, borderColor: currentTheme.hairline },
                   isSelected && [
                     styles.hudStyleCardSelected,
                     { borderColor: currentTheme.primary, backgroundColor: currentTheme.glow },
@@ -5881,6 +6095,7 @@ function App() {
                 <Text
                   style={[
                     styles.hudStyleLabel,
+                    { color: currentTheme.subtext },
                     isSelected && [
                       styles.hudStyleLabelSelected,
                       { color: currentTheme.primary },
@@ -5946,9 +6161,9 @@ function App() {
             setHasManuallyOpenedIntro(true);
             setShowIntro(true);
           }}
-          style={styles.secondaryOutlineBtn}
+          style={[styles.secondaryOutlineBtn, { borderColor: currentTheme.hairline }]}
         >
-          <Text style={styles.secondaryOutlineBtnText}>
+          <Text style={[styles.secondaryOutlineBtnText, { color: currentTheme.subtext }]}>
             View Intro & Permissions Guide
           </Text>
         </Pressable>
@@ -5965,7 +6180,7 @@ function App() {
 
       {/* App Version Footer */}
       <View style={styles.footerCol}>
-        <Text style={styles.footerVersion}>ReelCount v0.4.40</Text>
+        <Text style={styles.footerVersion}>ReelCount v0.4.43</Text>
         <Text style={styles.footerTagline}>Mindful Digital Wellbeing Sanctuary</Text>
       </View>
     </ScrollView>
@@ -5983,6 +6198,7 @@ function App() {
     currentTheme,
     dailyLimit,
     dailyQuestsClaimed.compass,
+    openCravingModal,
     dailyQuestsClaimed.reset,
     dailyQuestsClaimed.shield,
     focusTimerRunning,
@@ -6274,6 +6490,9 @@ function App() {
                       accessibilityState={{ selected: isTabActive }}
                       onTouchEnd={() => {
                         // Handled by dockPanResponder on physical device; retained for synthetic test environments
+                        if (Date.now() - lastPanHandledAtRef.current < 250) {
+                          return;
+                        }
                         if (!hasScrubbedRef.current && !isDragActiveRef.current) {
                           animateTabSelection(idx);
                         }
@@ -6692,7 +6911,7 @@ function App() {
                       </Text>
 
                       {/* Conflict Word Card */}
-                      <View style={styles.stroopWordCard}>
+                      <View style={[styles.stroopWordCard, { backgroundColor: currentTheme.background, borderColor: currentTheme.hairline }]}>
                         <Text
                           style={[
                             styles.stroopWordText,
@@ -6722,7 +6941,7 @@ function App() {
                               onPress={() => handleStroopAnswer(cName)}
                               style={[
                                 styles.stroopChoiceBtn,
-                                { borderColor: colorMap[cName] },
+                                { backgroundColor: currentTheme.surfaceRaised, borderColor: colorMap[cName] },
                               ]}
                             >
                               <View
@@ -6746,19 +6965,19 @@ function App() {
                       <Text style={styles.stroopSuccessDesc}>
                         The color-word conflict forced your executive brain to override the basal-ganglia autonomic dopamine loop.
                       </Text>
-                      <View style={styles.stroopXpBadge}>
-                        <Text style={styles.stroopXpBadgeText}>+40 Zen XP Earned</Text>
+                      <View style={[styles.stroopXpBadge, { backgroundColor: currentTheme.glow, borderColor: currentTheme.border }]}>
+                        <Text style={[styles.stroopXpBadgeText, { color: currentTheme.primary }]}>+40 Zen XP Earned</Text>
                       </View>
                       <Pressable
                         onPress={() => {
                           resetStroop();
                           setShowCravingModal(false);
                         }}
-                        style={styles.stroopCompleteBtn}
+                        style={[styles.stroopCompleteBtn, { backgroundColor: currentTheme.primary }]}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                           <AppIcon name="check" size={14} color={currentTheme.background} />
-                          <Text style={styles.stroopCompleteBtnText}>Conscious Awareness Restored</Text>
+                          <Text style={[styles.stroopCompleteBtnText, { color: currentTheme.background }]}>Conscious Awareness Restored</Text>
                         </View>
                       </Pressable>
                     </View>
@@ -6873,6 +7092,7 @@ function App() {
                   onPress={() => {
                     triggerDockHaptic();
                     setNourishingCount(c => c + 1);
+                    setZenXp(prev => prev + 10);
                     PrototypeSettings.recordMicroLog(realityCheckApp, realityCheckElapsedMins, 'nourishing').catch(() => {});
                     setShowRealityCheckModal(false);
                     Alert.alert('Polly: Session Logged', 'Logged as Nourishing. Metacognition +10 XP!');
@@ -6976,7 +7196,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   soundscapeDurationLabel: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '700',
     marginRight: 2,
@@ -6985,16 +7205,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   soundscapeDurationBtnActive: {
     borderColor: '#38d39f',
-    backgroundColor: '#15281f',
+    backgroundColor: '#16161c',
   },
   soundscapeDurationBtnText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -7020,7 +7240,7 @@ const styles = StyleSheet.create({
 
   // Attention Mastery & XP Styles
   masteryCard: {
-    backgroundColor: '#0c1511',
+    backgroundColor: '#0c0c10',
     borderRadius: 20,
     padding: 18,
     marginBottom: 16,
@@ -7048,7 +7268,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   masteryTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 18,
     fontWeight: '800',
     marginTop: 2,
@@ -7068,7 +7288,7 @@ const styles = StyleSheet.create({
   },
   masteryProgressTrack: {
     height: 8,
-    backgroundColor: '#1b2821',
+    backgroundColor: '#1e1e26',
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 6,
@@ -7084,7 +7304,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   masteryProgressSub: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -7094,7 +7314,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   questsHeader: {
-    color: '#657e71',
+    color: '#71717a',
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.2,
@@ -7107,7 +7327,7 @@ const styles = StyleSheet.create({
   },
   questItem: {
     width: '48%',
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderRadius: 12,
     padding: 10,
     flexDirection: 'row',
@@ -7117,7 +7337,7 @@ const styles = StyleSheet.create({
   },
   questItemDone: {
     borderColor: 'rgba(56, 211, 159, 0.4)',
-    backgroundColor: '#102219',
+    backgroundColor: '#111116',
   },
   questIcon: {
     fontSize: 16,
@@ -7129,12 +7349,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   questTitle: {
-    color: '#e2e8e5',
+    color: '#e4e4e7',
     fontSize: 12,
     fontWeight: '700',
   },
   questReward: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 10,
     fontWeight: '600',
     marginTop: 1,
@@ -7210,7 +7430,7 @@ const styles = StyleSheet.create({
   liveNowPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -7238,7 +7458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -7246,19 +7466,19 @@ const styles = StyleSheet.create({
   },
   hourlyBarItemSelected: {
     borderColor: '#38d39f',
-    backgroundColor: '#15251e',
+    backgroundColor: '#16161c',
   },
   hourlyBarItemCurrent: {
     borderWidth: 2,
   },
   hourlyBarHourText: {
-    color: '#657e71',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '700',
     marginBottom: 4,
   },
   hourlyBarTextActive: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
   },
   hourlyBarIndicator: {
     width: 14,
@@ -7270,7 +7490,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   hourInsightBox: {
-    backgroundColor: '#0c1511',
+    backgroundColor: '#0c0c10',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
@@ -7289,7 +7509,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hourInsightTimeRange: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -7298,13 +7518,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   hourInsightPeriodTitle: {
-    color: '#d1fae5',
+    color: '#e4e4e7',
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
   },
   hourInsightTip: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     lineHeight: 17,
   },
@@ -7322,7 +7542,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   triggerSubText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 12,
@@ -7335,7 +7555,7 @@ const styles = StyleSheet.create({
   triggerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -7344,20 +7564,20 @@ const styles = StyleSheet.create({
   },
   triggerPillSelected: {
     borderColor: '#38d39f',
-    backgroundColor: '#15281f',
+    backgroundColor: '#16161c',
   },
   triggerPillIcon: {
     fontSize: 15,
     marginRight: 6,
   },
   triggerPillLabel: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     fontWeight: '700',
     marginRight: 6,
   },
   triggerPillLabelSelected: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
   },
   triggerCountBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -7366,12 +7586,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   triggerCountBadgeText: {
-    color: '#657e71',
+    color: '#71717a',
     fontSize: 10,
     fontWeight: '800',
   },
   triggerAdviceCard: {
-    backgroundColor: '#0c1511',
+    backgroundColor: '#0c0c10',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
@@ -7385,7 +7605,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   triggerAdviceBody: {
-    color: '#d1fae5',
+    color: '#e4e4e7',
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '500',
@@ -7405,7 +7625,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   stroopInstruction: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 16,
@@ -7416,7 +7636,7 @@ const styles = StyleSheet.create({
   },
   stroopWordCard: {
     width: '100%',
-    backgroundColor: '#090e0c',
+    backgroundColor: '#09090c',
     borderRadius: 18,
     paddingVertical: 24,
     alignItems: 'center',
@@ -7445,7 +7665,7 @@ const styles = StyleSheet.create({
   },
   stroopChoiceBtn: {
     width: '48%',
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -7460,7 +7680,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   stroopChoiceText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 13,
     fontWeight: '800',
   },
@@ -7473,13 +7693,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   stroopSuccessTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 19,
     fontWeight: '900',
     marginBottom: 6,
   },
   stroopSuccessDesc: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
@@ -7552,7 +7772,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
-    backgroundColor: '#0b0e0c',
+    backgroundColor: '#0b0b0e',
   },
   introSkipText: {
     fontSize: 12,
@@ -7567,13 +7787,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     justifyContent: 'space-between',
-    backgroundColor: '#0b0e0c',
+    backgroundColor: '#0b0b0e',
   },
   introSlideHeaderCompact: {
     marginBottom: 4,
   },
   introSlideTitleCompact: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 18,
     fontWeight: '900',
     lineHeight: 22,
@@ -7582,7 +7802,7 @@ const styles = StyleSheet.create({
   introSlideSubtitleCompact: {
     fontSize: 11,
     lineHeight: 15,
-    color: '#8aa395',
+    color: '#9ca3af',
   },
   introInteractivePollyCard: {
     borderRadius: 16,
@@ -7670,7 +7890,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    backgroundColor: '#050706',
+    backgroundColor: '#050507',
     borderRadius: 10,
     marginBottom: 8,
   },
@@ -7682,7 +7902,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 18,
     borderWidth: 1,
-    backgroundColor: 'rgba(10, 15, 12, 0.95)',
+    backgroundColor: 'rgba(12, 12, 16, 0.95)',
   },
   introHudMascotMiniWrap: {
     width: 22,
@@ -7765,7 +7985,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   introSetupStepTextCompact: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     flex: 1,
     lineHeight: 15,
@@ -7774,7 +7994,7 @@ const styles = StyleSheet.create({
     marginVertical: 3,
   },
   bodyCompact: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     marginTop: 2,
   },
@@ -7785,7 +8005,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   consentTextCompact: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 10,
     flex: 1,
     lineHeight: 14,
@@ -7810,10 +8030,10 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   introCardWrap: {
-    backgroundColor: '#0b0e0c',
+    backgroundColor: '#0b0b0e',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#1a211d',
+    borderColor: '#1e1e26',
     overflow: 'hidden',
   },
   introHeroSlideImage: {
@@ -7838,14 +8058,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   introSlideTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 23,
     fontWeight: '900',
     lineHeight: 29,
     marginBottom: 8,
   },
   introSlideSubtitle: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 14,
@@ -7866,7 +8086,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   introChipText: {
-    color: '#e1e9e4',
+    color: '#e4e4e7',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -7896,14 +8116,14 @@ const styles = StyleSheet.create({
   },
   introPaginationDotInactive: {
     width: 8,
-    backgroundColor: '#222824',
+    backgroundColor: '#27272a',
   },
   introBackButton: {
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
   introBackText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -7964,18 +8184,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   introGoalOptionCap: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 18,
     fontWeight: '900',
   },
   introGoalOptionLabel: {
-    color: '#e1e9e4',
+    color: '#e4e4e7',
     fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
   },
   introGoalOptionSub: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 9,
     textAlign: 'center',
     marginTop: 2,
@@ -8012,7 +8232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    backgroundColor: '#050706',
+    backgroundColor: '#050507',
     borderRadius: 12,
     marginBottom: 10,
   },
@@ -8024,7 +8244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: 'rgba(10, 15, 12, 0.95)',
+    backgroundColor: 'rgba(12, 12, 16, 0.95)',
   },
   introHudPillDot: {
     width: 8,
@@ -8032,7 +8252,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   introHudPillText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -8058,7 +8278,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   introSimulateHelpText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     textAlign: 'center',
     marginTop: 8,
@@ -8083,7 +8303,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   introShieldTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -8097,7 +8317,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   introShieldDesc: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     lineHeight: 16,
   },
@@ -8158,7 +8378,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   introSetupStepText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     flex: 1,
     lineHeight: 17,
@@ -8248,7 +8468,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   introMascotWelcomeDesc: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     lineHeight: 17,
   },
@@ -8283,7 +8503,7 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#0b0e0c',
+    borderColor: '#0b0b0e',
   },
   introMascotSpeechWrap: {
     flex: 1,
@@ -8410,7 +8630,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   appHeaderTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 26,
     fontWeight: '900',
     letterSpacing: 0.3,
@@ -8422,7 +8642,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   greetingTip: {
-    color: '#6e8579',
+    color: '#71717a',
     fontWeight: '400',
   },
   servicePill: {
@@ -8461,7 +8681,7 @@ const styles = StyleSheet.create({
     color: '#4cd964',
   },
   servicePillTextInactive: {
-    color: '#8aa395',
+    color: '#9ca3af',
   },
 
   dashboardHeaderActions: {
@@ -8589,12 +8809,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: '#0e1511',
+    backgroundColor: '#0e0e13',
     borderWidth: 1,
     borderColor: '#1d2720',
   },
   heroTargetPillLabel: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -8632,14 +8852,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0c120f',
+    backgroundColor: '#0c0c10',
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: 1,
   },
   dashboardShortcutTitle: {
-    color: '#e1e9e4',
+    color: '#e4e4e7',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -8753,10 +8973,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a2b22',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#294335',
+    borderColor: '#27272a',
   },
   resetButtonText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -8790,7 +9010,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   heroCount: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 54,
     fontWeight: '900',
     lineHeight: 58,
@@ -8806,7 +9026,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroGoalSubtext: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     marginTop: 2,
     fontWeight: '600',
@@ -8822,7 +9042,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   riskGaugeLabel: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.8,
@@ -8837,7 +9057,7 @@ const styles = StyleSheet.create({
 
   riskTrack: {
     height: 9,
-    backgroundColor: '#1b2d24',
+    backgroundColor: '#18181f',
     borderRadius: 5,
     overflow: 'hidden',
   },
@@ -8874,7 +9094,7 @@ const styles = StyleSheet.create({
   heroStatsGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#162720',
+    backgroundColor: '#16161c',
     borderRadius: 14,
     paddingVertical: 12,
     marginTop: 16,
@@ -8890,12 +9110,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   heroStatValue: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 14,
     fontWeight: '800',
   },
   heroStatLabel: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 10,
     marginTop: 2,
     fontWeight: '600',
@@ -8930,12 +9150,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chartSubtitle: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     marginTop: 2,
   },
   chartAvgBadge: {
-    backgroundColor: '#1b2d24',
+    backgroundColor: '#18181f',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -8959,7 +9179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   barCountText: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 10,
     fontWeight: '700',
     marginBottom: 4,
@@ -9011,7 +9231,7 @@ const styles = StyleSheet.create({
 
   dayInsightCard: {
     marginTop: 14,
-    backgroundColor: '#162720',
+    backgroundColor: '#16161c',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
@@ -9029,7 +9249,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   highlightText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontWeight: '700',
   },
 
@@ -9054,7 +9274,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cardSectionTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 17,
     fontWeight: '700',
   },
@@ -9064,7 +9284,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cardSubtitle: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 16,
@@ -9096,7 +9316,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   platformQuotaAdjustLabel: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -9187,7 +9407,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   platformName: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -9212,12 +9432,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   platformTimeEstimate: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '500',
   },
   platformShareText: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -9233,7 +9453,7 @@ const styles = StyleSheet.create({
 
   // Tip Card
   tipCard: {
-    backgroundColor: '#12231b',
+    backgroundColor: '#141418',
     borderColor: 'rgba(56, 211, 159, 0.25)',
     borderWidth: 1,
     borderRadius: 14,
@@ -9254,20 +9474,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tipText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     lineHeight: 19,
   },
 
   // Timers & Limits Screen
   tabScreenTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 26,
     fontWeight: '800',
     marginBottom: 4,
   },
   tabScreenSubtitle: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
@@ -9281,10 +9501,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 3,
     paddingVertical: 12,
-    backgroundColor: '#182b22',
+    backgroundColor: '#18181f',
     borderRadius: 12,
     alignItems: 'center',
-    borderColor: '#243e31',
+    borderColor: '#27272a',
     borderWidth: 1,
   },
   pillButtonSelected: {
@@ -9292,12 +9512,12 @@ const styles = StyleSheet.create({
     borderColor: '#38d39f',
   },
   pillButtonText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     fontWeight: '700',
   },
   pillButtonTextSelected: {
-    color: '#090e0c',
+    color: '#09090c',
     fontWeight: '900',
   },
 
@@ -9305,27 +9525,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#162720',
+    backgroundColor: '#16161c',
     borderRadius: 12,
     padding: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   stepperBtn: {
-    backgroundColor: '#1f382c',
+    backgroundColor: '#1e1e26',
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#2a4d3c',
+    borderColor: '#27272a',
   },
   stepperBtnText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 13,
     fontWeight: '700',
   },
   stepperLabel: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -9344,12 +9564,12 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   toggleTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 15,
     fontWeight: '600',
   },
   toggleSubtitle: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
@@ -9370,8 +9590,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   badgeNormal: {
-    backgroundColor: '#182b22',
-    borderColor: '#284336',
+    backgroundColor: '#18181f',
+    borderColor: '#27272a',
   },
   statusBadgeSmallText: {
     fontSize: 10,
@@ -9379,13 +9599,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   textBlocked: { color: '#f87171' },
-  textNormal: { color: '#6e8579' },
+  textNormal: { color: '#71717a' },
 
   switchTrack: {
     width: 48,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#20342a',
+    backgroundColor: '#27272a',
     padding: 2,
     justifyContent: 'center',
   },
@@ -9396,7 +9616,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#f1f5f3',
+    backgroundColor: '#f4f4f5',
   },
   switchThumbOn: {
     alignSelf: 'flex-end',
@@ -9404,7 +9624,7 @@ const styles = StyleSheet.create({
 
   // Focus Mode Screen
   focusHeroCard: {
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderColor: 'rgba(56, 211, 159, 0.2)',
     borderWidth: 1,
     borderRadius: 22,
@@ -9444,25 +9664,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.45)',
   },
   focusLiveBadgeIdle: {
-    backgroundColor: '#172720',
-    borderColor: '#263d33',
+    backgroundColor: '#17171d',
+    borderColor: '#27272a',
   },
   focusLiveBadgeText: {
     fontSize: 11,
     fontWeight: '800',
   },
   focusLiveBadgeTextActive: { color: '#f87171' },
-  focusLiveBadgeTextIdle: { color: '#6e8579' },
+  focusLiveBadgeTextIdle: { color: '#71717a' },
 
   focusTimerText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 58,
     fontWeight: '900',
     marginVertical: 12,
     letterSpacing: 1,
   },
   focusHeroSubtitle: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 16,
@@ -9476,10 +9696,10 @@ const styles = StyleSheet.create({
   presetBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#182b22',
+    backgroundColor: '#18181f',
     borderRadius: 10,
     marginHorizontal: 4,
-    borderColor: '#263f33',
+    borderColor: '#27272a',
     borderWidth: 1,
   },
   presetBtnActive: {
@@ -9487,12 +9707,12 @@ const styles = StyleSheet.create({
     borderColor: '#38d39f',
   },
   presetBtnText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 12,
     fontWeight: '700',
   },
   presetBtnTextActive: {
-    color: '#090e0c',
+    color: '#09090c',
     fontWeight: '900',
   },
   focusButtonsRow: {
@@ -9515,21 +9735,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
   },
   focusActionButtonText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 15,
     fontWeight: '800',
   },
   focusResetButton: {
     flex: 1,
-    backgroundColor: '#1a2e24',
+    backgroundColor: '#18181f',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#294537',
+    borderColor: '#27272a',
   },
   focusResetButtonText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -9538,13 +9758,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   quickSelectBtn: {
-    backgroundColor: '#1a2e24',
+    backgroundColor: '#18181f',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     marginLeft: 6,
     borderWidth: 1,
-    borderColor: '#294335',
+    borderColor: '#27272a',
   },
   quickSelectBtnText: {
     color: '#38d39f',
@@ -9556,7 +9776,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#15251e',
+    backgroundColor: '#16161c',
     padding: 14,
     borderRadius: 12,
     marginBottom: 10,
@@ -9572,7 +9792,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   masterToggleTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 15,
     fontWeight: '700',
   },
@@ -9598,12 +9818,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   healthTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 14,
     fontWeight: '700',
   },
   healthDesc: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
@@ -9616,7 +9836,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   settingsActionBtnText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -9630,14 +9850,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   secondaryOutlineBtn: {
-    borderColor: '#243a2f',
+    borderColor: '#27272a',
     borderWidth: 1,
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
   secondaryOutlineBtnText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -9655,13 +9875,13 @@ const styles = StyleSheet.create({
     marginVertical: 18,
   },
   footerVersion: {
-    color: '#4e6258',
+    color: '#646470',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   footerTagline: {
-    color: '#3c4c44',
+    color: '#52525b',
     fontSize: 11,
     marginTop: 3,
   },
@@ -9933,7 +10153,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   dockQuickActionCloseText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '800',
   },
@@ -10007,7 +10227,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#172c21',
+    backgroundColor: '#17171d',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
@@ -10024,7 +10244,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
   },
   title: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 28,
     fontWeight: '900',
     textAlign: 'center',
@@ -10032,7 +10252,7 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   introSummary: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 21,
@@ -10040,7 +10260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   onboardingHighlights: {
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
@@ -10061,25 +10281,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   highlightTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 14,
     fontWeight: '700',
   },
   highlightDesc: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
   },
   statusSection: {
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderColor: 'rgba(56, 211, 159, 0.12)',
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginBottom: 18,
   },
-  sectionTitle: { color: '#f1f5f3', fontSize: 17, fontWeight: '700' },
+  sectionTitle: { color: '#f4f4f5', fontSize: 17, fontWeight: '700' },
   statusBadge: {
     alignSelf: 'flex-start',
     borderRadius: 8,
@@ -10099,11 +10319,11 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { fontSize: 13, fontWeight: '700' },
   statusBadgeTextActive: { color: '#4cd964' },
-  statusBadgeTextInactive: { color: '#8aa395' },
-  body: { color: '#9cb1a6', fontSize: 14, lineHeight: 21, marginTop: 8 },
+  statusBadgeTextInactive: { color: '#9ca3af' },
+  body: { color: '#a1a1aa', fontSize: 14, lineHeight: 21, marginTop: 8 },
   statusHint: { color: '#5b7367', fontSize: 12, lineHeight: 17, marginTop: 8 },
   connectedCard: {
-    backgroundColor: '#0f2319',
+    backgroundColor: '#111116',
     borderColor: 'rgba(56, 211, 159, 0.45)',
     borderWidth: 1.5,
     borderRadius: 16,
@@ -10120,7 +10340,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: '#38d39f',
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 18,
     fontWeight: '900',
     textAlign: 'center',
@@ -10131,12 +10351,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   connectedHeaderTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 16,
     fontWeight: '800',
   },
   connectedHeaderSubtitle: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
@@ -10149,7 +10369,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryLaunchButtonText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 15,
     fontWeight: '800',
   },
@@ -10172,7 +10392,7 @@ const styles = StyleSheet.create({
   },
   checkboxChecked: { backgroundColor: '#38d39f' },
   checkmark: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 16,
     fontWeight: '900',
     lineHeight: 19,
@@ -10194,7 +10414,7 @@ const styles = StyleSheet.create({
     borderColor: '#222222',
   },
   buttonText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 15,
     fontWeight: '800',
     textAlign: 'center',
@@ -10237,7 +10457,7 @@ const styles = StyleSheet.create({
   },
   breatheModalCard: {
     width: '100%',
-    backgroundColor: '#111d17',
+    backgroundColor: '#111115',
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
@@ -10251,13 +10471,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   breatheModalTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 22,
     fontWeight: '900',
     marginTop: 4,
   },
   breatheModalDesc: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
@@ -10294,19 +10514,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   breathePhaseText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   breatheCycleCount: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 16,
     fontWeight: '700',
     marginTop: 4,
   },
   breatheRemainingText: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 14,
@@ -10315,21 +10535,21 @@ const styles = StyleSheet.create({
   breatheCloseBtn: {
     width: '100%',
     paddingVertical: 13,
-    backgroundColor: '#1b2d24',
+    backgroundColor: '#18181f',
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2b473a',
+    borderColor: '#27272a',
   },
   breatheCloseBtnText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 14,
     fontWeight: '700',
   },
 
   // Craving SOS Banner Styles
   cravingSosBanner: {
-    backgroundColor: '#0c1d15',
+    backgroundColor: '#0e0e13',
     borderColor: 'rgba(56, 211, 159, 0.4)',
     borderWidth: 1.5,
     borderRadius: 20,
@@ -10357,18 +10577,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   cravingSosWaveTag: {
-    color: '#7a9e8b',
+    color: '#8b8b96',
     fontSize: 12,
     fontWeight: '600',
   },
   cravingSosTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 17,
     fontWeight: '800',
     marginTop: 2,
   },
   cravingSosDesc: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     lineHeight: 18,
     marginTop: 4,
@@ -10387,13 +10607,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cravingSosPrimaryBtnText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 13,
     fontWeight: '800',
   },
   cravingSosSecondaryBtn: {
     flex: 1,
-    backgroundColor: '#16281f',
+    backgroundColor: '#16161c',
     borderColor: 'rgba(56, 211, 159, 0.3)',
     borderWidth: 1,
     borderRadius: 12,
@@ -10402,7 +10622,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cravingSosSecondaryBtnText: {
-    color: '#c2d4cb',
+    color: '#d4d4d8',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -10417,7 +10637,7 @@ const styles = StyleSheet.create({
   lifeReclaimedCard: {
     flexBasis: '47%',
     flexGrow: 1,
-    backgroundColor: '#0d1813',
+    backgroundColor: '#0e0e13',
     borderColor: 'rgba(56, 211, 159, 0.12)',
     borderWidth: 1,
     borderRadius: 14,
@@ -10434,7 +10654,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   lifeReclaimedLabel: {
-    color: '#7a9e8b',
+    color: '#8b8b96',
     fontSize: 11,
     marginTop: 2,
     textAlign: 'center',
@@ -10463,12 +10683,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   chronoTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 15,
     fontWeight: '800',
   },
   chronoAdviceText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     lineHeight: 18,
   },
@@ -10493,7 +10713,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(56, 211, 159, 0.35)',
   },
   milestoneLocked: {
-    backgroundColor: '#0e1613',
+    backgroundColor: '#0e0e13',
     borderColor: '#1e2d25',
     opacity: 0.6,
   },
@@ -10507,13 +10727,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   milestoneNameUnlocked: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
   },
   milestoneNameLocked: {
-    color: '#7a9e8b',
+    color: '#8b8b96',
   },
   milestoneDesc: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     textAlign: 'center',
     marginTop: 2,
@@ -10528,7 +10748,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 211, 159, 0.2)',
   },
   milestoneStatusTagLocked: {
-    backgroundColor: '#1b2821',
+    backgroundColor: '#1e1e26',
   },
   milestoneStatusText: {
     fontSize: 10,
@@ -10539,7 +10759,7 @@ const styles = StyleSheet.create({
     color: '#38d39f',
   },
   milestoneStatusTextLocked: {
-    color: '#6e8579',
+    color: '#71717a',
   },
 
   // HUD Style Selector
@@ -10550,8 +10770,8 @@ const styles = StyleSheet.create({
   },
   hudStyleCard: {
     flex: 1,
-    backgroundColor: '#0d1813',
-    borderColor: '#1d2c23',
+    backgroundColor: '#0e0e13',
+    borderColor: '#22222b',
     borderWidth: 1,
     borderRadius: 14,
     padding: 12,
@@ -10568,15 +10788,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   hudStyleLabel: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 12,
     fontWeight: '700',
   },
   hudStyleLabelSelected: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
   },
   hudStyleDesc: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 10,
     textAlign: 'center',
     marginTop: 2,
@@ -10585,7 +10805,7 @@ const styles = StyleSheet.create({
   // Craving Modal Switcher & Tools
   modalTabRow: {
     flexDirection: 'row',
-    backgroundColor: '#090e0c',
+    backgroundColor: '#09090c',
     borderRadius: 12,
     borderWidth: 1,
     padding: 4,
@@ -10599,11 +10819,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalTabBtnActive: {
-    backgroundColor: '#1b2d24',
+    backgroundColor: '#18181f',
     borderWidth: 1,
   },
   modalTabBtnText: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -10629,18 +10849,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   delaySecondsText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 36,
     fontWeight: '900',
   },
   delaySublabel: {
-    color: '#7a9e8b',
+    color: '#8b8b96',
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
   },
   delayStageText: {
-    color: '#c2d4cb',
+    color: '#d4d4d8',
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
@@ -10664,27 +10884,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#eab308',
   },
   delayActionBtnText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 14,
     fontWeight: '800',
   },
   delayResetBtn: {
-    backgroundColor: '#16281f',
+    backgroundColor: '#16161c',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#263d30',
+    borderColor: '#27272a',
   },
   delayResetBtnText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     fontWeight: '700',
   },
   groundingCard: {
     width: '100%',
-    backgroundColor: '#0d1813',
+    backgroundColor: '#0e0e13',
     borderColor: 'rgba(56, 211, 159, 0.25)',
     borderWidth: 1,
     borderRadius: 18,
@@ -10707,18 +10927,18 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   groundingStepCount: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 12,
     fontWeight: '700',
   },
   groundingTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 17,
     fontWeight: '800',
     marginBottom: 6,
   },
   groundingPrompt: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 13,
     lineHeight: 19,
   },
@@ -10731,14 +10951,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   groundingNextBtnText: {
-    color: '#090e0c',
+    color: '#09090c',
     fontSize: 14,
     fontWeight: '800',
   },
 
   // Daily Intention Anchor
   intentionCard: {
-    backgroundColor: '#0c1a14',
+    backgroundColor: '#0e0e13',
     borderColor: 'rgba(56, 211, 159, 0.25)',
     borderWidth: 1,
     borderRadius: 18,
@@ -10758,12 +10978,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   intentionTag: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 11,
     fontWeight: '600',
   },
   intentionText: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 12,
@@ -10776,8 +10996,8 @@ const styles = StyleSheet.create({
   intentionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#12221b',
-    borderColor: '#23382d',
+    backgroundColor: '#141418',
+    borderColor: '#27272a',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
@@ -10792,7 +11012,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   intentionPillText: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -10802,7 +11022,7 @@ const styles = StyleSheet.create({
 
   // Digital Wellbeing Vitality Score
   vitalityCard: {
-    backgroundColor: '#0f2319',
+    backgroundColor: '#111116',
     borderColor: 'rgba(56, 211, 159, 0.35)',
     borderWidth: 1.5,
     borderRadius: 18,
@@ -10827,18 +11047,18 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   vitalityScoreNum: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 32,
     fontWeight: '900',
   },
   vitalityScoreMax: {
-    color: '#6e8579',
+    color: '#71717a',
     fontSize: 15,
     fontWeight: '700',
     marginLeft: 4,
   },
   vitalityStatusText: {
-    color: '#9cb1a6',
+    color: '#a1a1aa',
     fontSize: 12,
     lineHeight: 16,
     marginTop: 2,
@@ -10880,8 +11100,8 @@ const styles = StyleSheet.create({
   },
   moodCard: {
     flex: 1,
-    backgroundColor: '#0d1813',
-    borderColor: '#1d2c23',
+    backgroundColor: '#0e0e13',
+    borderColor: '#22222b',
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 12,
@@ -10897,7 +11117,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   moodLabel: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
@@ -10914,7 +11134,7 @@ const styles = StyleSheet.create({
     borderLeftColor: '#38d39f',
   },
   moodTipText: {
-    color: '#c2d4cb',
+    color: '#d4d4d8',
     fontSize: 12,
     lineHeight: 16,
   },
@@ -10925,13 +11145,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a0f12',
   },
   sabbathBtn: {
-    backgroundColor: '#1b2d24',
+    backgroundColor: '#18181f',
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
     marginTop: 12,
     borderWidth: 1,
-    borderColor: '#2b473a',
+    borderColor: '#27272a',
   },
   sabbathBtnActive: {
     backgroundColor: '#7f1d1d',
@@ -10948,12 +11168,12 @@ const styles = StyleSheet.create({
 
   // Focus Soundscapes
   soundscapeToggleBtn: {
-    backgroundColor: '#1a2c22',
+    backgroundColor: '#18181f',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: '#2d4a3b',
+    borderColor: '#27272a',
   },
   soundscapeToggleBtnText: {
     color: '#38d39f',
@@ -10967,8 +11187,8 @@ const styles = StyleSheet.create({
   },
   soundscapeCard: {
     flex: 1,
-    backgroundColor: '#0d1813',
-    borderColor: '#1d2c23',
+    backgroundColor: '#0e0e13',
+    borderColor: '#22222b',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 10,
@@ -10983,7 +11203,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   soundscapeName: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
@@ -10996,7 +11216,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     padding: 10,
-    backgroundColor: '#0a1410',
+    backgroundColor: '#0a0a0d',
     borderRadius: 10,
     borderWidth: 1,
   },
@@ -11011,7 +11231,7 @@ const styles = StyleSheet.create({
   eqBar3: { height: 18 },
   eqBar4: { height: 12 },
   eqLabel: {
-    color: '#7a9e8b',
+    color: '#8b8b96',
     fontSize: 12,
     marginLeft: 8,
     fontWeight: '600',
@@ -11072,7 +11292,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   themeCardTitle: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 2,
@@ -11122,8 +11342,8 @@ const styles = StyleSheet.create({
   },
   themeChip: {
     flex: 1,
-    backgroundColor: '#0d1813',
-    borderColor: '#1d2c23',
+    backgroundColor: '#0e0e13',
+    borderColor: '#22222b',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 12,
@@ -11138,12 +11358,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   themeChipName: {
-    color: '#8aa395',
+    color: '#9ca3af',
     fontSize: 11,
     fontWeight: '700',
   },
   themeChipNameSelected: {
-    color: '#f1f5f3',
+    color: '#f4f4f5',
   },
 
   // In-Feed Neuro-Interventions Styles
